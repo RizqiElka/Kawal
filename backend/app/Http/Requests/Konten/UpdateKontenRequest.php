@@ -30,6 +30,8 @@ class UpdateKontenRequest extends FormRequest
             'foto.*' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'captions' => ['nullable', 'array', 'max:3'],
             'captions.*' => ['nullable', 'string', 'max:255'],
+            'foto_sosmed' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'hapus_foto_sosmed' => ['nullable', 'boolean'],
         ];
     }
 

@@ -12,11 +12,34 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        // Scope filter berdasarkan bidang / hak akses user
-        $applyScope = function ($query) use ($user) {
-            if (! $user->hasRole('admin') && ! $user->can('konten.lihat-semua-bidang')) {
+        // Scope filter berdasarkan peran user:
+        // Admin, Kepala Dinas, dan Sekretaris melihat seluruh konten lintas bidang
+        $canSeeAll = $user->hasRole('admin') 
+            || $user->hasRole('kepala') 
+            || $user->hasRole('sekretaris');
+
+        $applyScope = function ($query) use ($user, $canSeeAll) {
+            if (! $canSeeAll) {
                 if ($user->hasRole('kabid')) {
-                    $query->where('bidang_id', $user->bidang_id);
+                    $query->where(function ($q) use ($user) {
+                        $q->where(function ($sub) use ($user) {
+                            $sub->where('status', 'diproses')->where('tahap_saat_ini', 'kabid');
+                            if ($user->bidang_id) {
+                                $sub->where('bidang_id', $user->bidang_id);
+                            }
+                        })->orWhere('user_id', $user->id);
+                    });
+                } elseif ($user->hasRole('editor')) {
+                    $query->where(function ($q) use ($user) {
+                        $q->where(function ($sub) {
+                            $sub->where('status', 'diproses')->where('tahap_saat_ini', 'editor');
+                        })->orWhere('user_id', $user->id);
+                    });
+                } elseif ($user->hasRole('publisher')) {
+                    $query->where(function ($q) use ($user) {
+                        $q->whereIn('status', ['disetujui', 'terbit'])
+                          ->orWhere('user_id', $user->id);
+                    });
                 } else {
                     $query->where(function ($q) use ($user) {
                         $q->where('user_id', $user->id);
@@ -30,21 +53,44 @@ class DashboardController extends Controller
         };
 
         // Total konten (Draft TIDAK dihitung, hanya konten yang sudah diajukan/diproses/terbit/revisi/ditolak)
+        // Dihitung berdasarkan lingkup yang bisa diakses user (atau seluruhnya jika admin/kepala/sekretaris)
         $totalKontenQuery = Konten::where('status', '!=', 'draft');
-        $totalKonten = $applyScope($totalKontenQuery)->count();
+        if (! $canSeeAll) {
+            if ($user->hasRole('kabid') || $user->hasRole('user')) {
+                if ($user->bidang_id) {
+                    $totalKontenQuery->where('bidang_id', $user->bidang_id);
+                } else {
+                    $totalKontenQuery->where('user_id', $user->id);
+                }
+            } elseif ($user->hasRole('editor')) {
+                // Untuk editor: konten yang masuk ke editor atau dibuat editor
+                $totalKontenQuery->where(function ($q) use ($user) {
+                    $q->where(function ($sub) {
+                        $sub->where('status', 'diproses')->where('tahap_saat_ini', 'editor');
+                    })->orWhere('user_id', $user->id);
+                });
+            } elseif ($user->hasRole('publisher')) {
+                // Untuk publisher: konten yang disetujui / terbit
+                $totalKontenQuery->where(function ($q) use ($user) {
+                    $q->whereIn('status', ['disetujui', 'terbit'])->orWhere('user_id', $user->id);
+                });
+            }
+        }
+        $totalKonten = $totalKontenQuery->count();
 
         // Menunggu persetujuan oleh user berdasarkan role
         $menungguPersetujuanQuery = Konten::where('status', 'diproses');
-        if (! $user->hasRole('admin') && ! $user->can('konten.lihat-semua-bidang')) {
+        if (! $canSeeAll) {
             if ($user->hasRole('kabid')) {
-                $menungguPersetujuanQuery->where('tahap_saat_ini', 'kabid')
-                    ->where('bidang_id', $user->bidang_id);
+                $menungguPersetujuanQuery->where('tahap_saat_ini', 'kabid');
+                if ($user->bidang_id) {
+                    $menungguPersetujuanQuery->where('bidang_id', $user->bidang_id);
+                }
             } elseif ($user->hasRole('editor')) {
                 $menungguPersetujuanQuery->where('tahap_saat_ini', 'editor');
-            } elseif ($user->hasRole('sekretaris')) {
-                $menungguPersetujuanQuery->where('tahap_saat_ini', 'sekretaris');
-            } elseif ($user->hasRole('kepala')) {
-                $menungguPersetujuanQuery->where('tahap_saat_ini', 'kepala');
+            } elseif ($user->hasRole('publisher')) {
+                // Publisher tidak meninjau persetujuan workflow, jadi 0
+                $menungguPersetujuanQuery->whereRaw('1 = 0');
             } else {
                 $menungguPersetujuanQuery->where('user_id', $user->id);
             }
@@ -53,11 +99,28 @@ class DashboardController extends Controller
 
         // Perlu revisi
         $perluRevisiQuery = Konten::where('status', 'revisi');
-        $perluRevisi = $applyScope($perluRevisiQuery)->count();
+        if (! $canSeeAll) {
+            if ($user->bidang_id) {
+                $perluRevisiQuery->where('bidang_id', $user->bidang_id);
+            } else {
+                $perluRevisiQuery->where('user_id', $user->id);
+            }
+        }
+        $perluRevisi = $perluRevisiQuery->count();
 
-        // Telah terbit
+        // Telah disetujui (siap publikasi / masuk publisher)
+        $telahDisetujuiQuery = Konten::where('status', 'disetujui');
+        if (! $canSeeAll && $user->bidang_id && ! $user->hasRole('publisher')) {
+            $telahDisetujuiQuery->where('bidang_id', $user->bidang_id);
+        }
+        $telahDisetujui = $telahDisetujuiQuery->count();
+
+        // Telah terbit (sudah dipublikasikan)
         $telahTerbitQuery = Konten::where('status', 'terbit');
-        $telahTerbit = $applyScope($telahTerbitQuery)->count();
+        if (! $canSeeAll && $user->bidang_id && ! $user->hasRole('publisher')) {
+            $telahTerbitQuery->where('bidang_id', $user->bidang_id);
+        }
+        $telahTerbit = $telahTerbitQuery->count();
 
         // Konten per bidang (top 6) - Kecualikan draft
         $kontenPerBidangQuery = Konten::select('bidang_id', DB::raw('count(*) as total'))
@@ -105,6 +168,7 @@ class DashboardController extends Controller
                 'total_konten'             => $totalKonten,
                 'menunggu_persetujuan'     => $menungguPersetujuan,
                 'perlu_revisi'             => $perluRevisi,
+                'telah_disetujui'          => $telahDisetujui,
                 'telah_terbit'             => $telahTerbit,
                 'konten_per_bidang'        => $kontenPerBidang,
                 'distribusi_status'        => $distribusiStatus,

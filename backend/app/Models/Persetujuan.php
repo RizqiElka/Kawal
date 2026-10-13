@@ -17,6 +17,7 @@ class Persetujuan extends Model
         'tahap',
         'reviewer_id',
         'aksi',
+        'target_tahap',
         'catatan',
         'revisi_ke',
         'acted_at',

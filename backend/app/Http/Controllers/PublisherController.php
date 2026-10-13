@@ -31,6 +31,47 @@ class PublisherController extends Controller
     {
         Gate::authorize('publish', $konten);
 
+        // Dukung format pendataan (publications: [{kanal_id, url_post, published_at}])
+        // maupun format channels lama ({channels: [{kanal_id, jadwal_at}]})
+        if ($request->has('publications')) {
+            $validated = $request->validate([
+                'publications' => ['required', 'array', 'min:1'],
+                'publications.*.kanal_id' => ['required', 'integer', 'exists:kanal_publikasi,id'],
+                'publications.*.url_post' => ['nullable', 'string', 'max:500'],
+                'publications.*.published_at' => ['nullable', 'date'],
+                'publications.*.status' => ['nullable', 'string', 'in:menunggu,terjadwal,berhasil,gagal'],
+            ], [
+                'publications.required' => 'Pilih minimal satu kanal publikasi.',
+                'publications.*.kanal_id.required' => 'Kanal publikasi wajib dipilih.',
+            ]);
+
+            foreach ($validated['publications'] as $item) {
+                Publikasi::updateOrCreate(
+                    [
+                        'konten_id' => $konten->id,
+                        'kanal_id' => $item['kanal_id'],
+                    ],
+                    [
+                        'url_post' => $item['url_post'] ?? null,
+                        'published_at' => ! empty($item['published_at']) ? Carbon::parse($item['published_at']) : Carbon::now(),
+                        'status' => $item['status'] ?? 'berhasil',
+                        'pesan_error' => null,
+                    ]
+                );
+            }
+
+            // Jika ada minimal 1 kanal yang berhasil dipublikasi, ubah status konten jadi 'terbit'
+            $konten->update([
+                'status' => 'terbit',
+                'published_at' => $konten->published_at ?? Carbon::now(),
+            ]);
+
+            return response()->json([
+                'message' => 'Data tautan dan waktu publikasi konten berhasil disimpan.',
+                'data' => new KontenResource($konten->fresh(['user', 'bidang', 'jenisKonten', 'foto', 'persetujuan.reviewer', 'publikasi.kanal'])),
+            ]);
+        }
+
         $validated = $request->validate([
             'channels' => ['required', 'array', 'min:1'],
             'channels.*.kanal_id' => ['required', 'integer', 'exists:kanal_publikasi,id'],
@@ -60,10 +101,8 @@ class PublisherController extends Controller
             );
 
             if ($isScheduled) {
-                // Jadwalkan job sesuai waktu yang ditentukan
                 PublishContentToChannelJob::dispatch($publikasi)->delay($jadwalAt);
             } else {
-                // Jalankan publikasi segera
                 PublishContentToChannelJob::dispatch($publikasi);
             }
 
@@ -73,6 +112,29 @@ class PublisherController extends Controller
         return response()->json([
             'message' => 'Tugas publikasi konten berhasil dijadwalkan / dikirim ke antrean.',
             'data' => new KontenResource($konten->fresh(['user', 'bidang', 'jenisKonten', 'foto', 'persetujuan.reviewer', 'publikasi.kanal'])),
+        ]);
+    }
+
+    /**
+     * Hapus satu data publikasi kanal pada konten.
+     */
+    public function destroy(Request $request, Publikasi $publikasi): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user->can('publikasi.terbitkan') && ! $user->hasRole('admin')) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus data publikasi.');
+        }
+
+        $konten = $publikasi->konten;
+        $publikasi->delete();
+
+        // Jika tidak ada publikasi lagi dan statusnya terbit, kembalikan ke disetujui
+        if ($konten && $konten->publikasi()->count() === 0 && $konten->status === 'terbit') {
+            $konten->update(['status' => 'disetujui']);
+        }
+
+        return response()->json([
+            'message' => 'Data publikasi kanal berhasil dihapus.',
         ]);
     }
 

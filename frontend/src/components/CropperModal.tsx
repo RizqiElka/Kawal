@@ -6,6 +6,9 @@ import { X, ZoomIn, ZoomOut, Check } from 'lucide-react';
 interface CropperModalProps {
   isOpen: boolean;
   imageSrc: string | null;
+  aspectRatio?: number;
+  title?: string;
+  description?: string;
   onClose: () => void;
   onCropComplete: (croppedBlob: Blob) => void;
 }
@@ -13,6 +16,9 @@ interface CropperModalProps {
 export const CropperModal: React.FC<CropperModalProps> = ({
   isOpen,
   imageSrc,
+  aspectRatio = 16 / 9,
+  title = 'Sesuaikan Rasio Foto (16:9)',
+  description = 'Geser atau perbesar gambar agar sesuai standar publikasi lanskap instansi.',
   onClose,
   onCropComplete,
 }) => {
@@ -79,8 +85,8 @@ export const CropperModal: React.FC<CropperModalProps> = ({
       <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh]">
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-slate-800 dark:text-slate-200 text-lg">Sesuaikan Rasio Foto (16:9)</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Geser atau perbesar gambar agar sesuai standar publikasi lanskap instansi.</p>
+            <h3 className="font-bold text-slate-800 dark:text-slate-200 text-lg">{title}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{description}</p>
           </div>
           <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:bg-slate-700">
             <X className="w-5 h-5" />
@@ -92,7 +98,7 @@ export const CropperModal: React.FC<CropperModalProps> = ({
             image={imageSrc}
             crop={crop}
             zoom={zoom}
-            aspect={16 / 9}
+            aspect={aspectRatio}
             onCropChange={onCropChange}
             onZoomChange={onZoomChange}
             onCropComplete={handleCropComplete}
@@ -128,7 +134,7 @@ export const CropperModal: React.FC<CropperModalProps> = ({
               className="px-5 py-2 text-sm font-medium text-white bg-sigap-600 rounded-xl hover:bg-sigap-700 flex items-center gap-2 shadow-sm shadow-sigap-200"
             >
               <Check className="w-4 h-4" />
-              Terapkan Pemotongan 16:9
+              Terapkan Pemotongan
             </button>
           </div>
         </div>

@@ -35,29 +35,45 @@ class KontenController extends Controller
               ->orWhere('status', '!=', 'draft');
         });
 
-        // Batas akses data (Scope Bidang & Peninjau Persetujuan)
-        if (! $user->hasRole('admin') && ! $user->can('konten.lihat-semua-bidang')) {
-            $query->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id);
+        // Batas akses data sesuai peran / role:
+        // Admin, Kepala Dinas, dan Sekretaris melihat SEMUA konten lintas status/bidang
+        $canSeeAll = $user->hasRole('admin') 
+            || $user->hasRole('kepala') 
+            || $user->hasRole('sekretaris');
 
-                if ($user->bidang_id) {
-                    $q->orWhere('bidang_id', $user->bidang_id);
-                }
-
-                if ($user->hasRole('editor')) {
-                    $q->orWhere(function ($sub) {
+        if (! $canSeeAll) {
+            if ($user->hasRole('kabid')) {
+                // Kabid: HANYA menampilkan konten yang sedang menunggu persetujuan Kabid di bidangnya
+                $query->where(function ($q) use ($user) {
+                    $q->where(function ($sub) use ($user) {
+                        $sub->where('status', 'diproses')->where('tahap_saat_ini', 'kabid');
+                        if ($user->bidang_id) {
+                            $sub->where('bidang_id', $user->bidang_id);
+                        }
+                    })->orWhere('user_id', $user->id);
+                });
+            } elseif ($user->hasRole('editor')) {
+                // Editor: HANYA menampilkan konten yang sedang menunggu persetujuan Editor
+                $query->where(function ($q) use ($user) {
+                    $q->where(function ($sub) {
                         $sub->where('status', 'diproses')->where('tahap_saat_ini', 'editor');
-                    });
-                } elseif ($user->hasRole('sekretaris')) {
-                    $q->orWhere(function ($sub) {
-                        $sub->where('status', 'diproses')->where('tahap_saat_ini', 'sekretaris');
-                    });
-                } elseif ($user->hasRole('kepala')) {
-                    $q->orWhere(function ($sub) {
-                        $sub->where('status', 'diproses')->where('tahap_saat_ini', 'kepala');
-                    });
-                }
-            });
+                    })->orWhere('user_id', $user->id);
+                });
+            } elseif ($user->hasRole('publisher')) {
+                // Publisher: HANYA menampilkan konten yang siap publikasi / sudah terbit (disetujui & terbit)
+                $query->where(function ($q) use ($user) {
+                    $q->whereIn('status', ['disetujui', 'terbit'])
+                      ->orWhere('user_id', $user->id);
+                });
+            } else {
+                // User biasa (staf pembuat konten): hanya konten buatannya sendiri atau dalam bidangnya
+                $query->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                    if ($user->bidang_id) {
+                        $q->orWhere('bidang_id', $user->bidang_id);
+                    }
+                });
+            }
         }
 
         // Filter status
@@ -142,6 +158,12 @@ class KontenController extends Controller
                 'revisi_ke' => 0,
             ]);
 
+            // Simpan foto sosmed jika diunggah
+            if ($request->hasFile('foto_sosmed')) {
+                $sosmedPath = $request->file('foto_sosmed')->store('konten_foto_sosmed', 'public');
+                $konten->update(['foto_sosmed_path' => $sosmedPath]);
+            }
+
             // Simpan 3 foto
             $files = $request->file('foto');
             $captions = $request->input('captions', []);
@@ -201,13 +223,28 @@ class KontenController extends Controller
         Gate::authorize('update', $konten);
 
         DB::transaction(function () use ($request, $konten) {
-            $konten->update([
+            $updateData = [
                 'judul' => $request->judul,
                 'slug' => Str::slug($request->judul) . '-' . $konten->id,
                 'isi' => $request->isi,
                 'jenis_konten_id' => $request->jenis_konten_id,
                 'bidang_id' => $request->input('bidang_id', $konten->bidang_id),
-            ]);
+            ];
+
+            // Kelola foto sosmed jika ada upload baru atau penghapusan
+            if ($request->hasFile('foto_sosmed')) {
+                if ($konten->foto_sosmed_path) {
+                    Storage::disk('public')->delete($konten->foto_sosmed_path);
+                }
+                $updateData['foto_sosmed_path'] = $request->file('foto_sosmed')->store('konten_foto_sosmed', 'public');
+            } elseif ($request->boolean('hapus_foto_sosmed')) {
+                if ($konten->foto_sosmed_path) {
+                    Storage::disk('public')->delete($konten->foto_sosmed_path);
+                }
+                $updateData['foto_sosmed_path'] = null;
+            }
+
+            $konten->update($updateData);
 
             // Jika ada pengunggahan 3 foto baru
             if ($request->hasFile('foto')) {
@@ -315,15 +352,21 @@ class KontenController extends Controller
 
         $request->validate([
             'catatan' => ['required', 'string', 'min:5'],
+            'target_tahap' => ['nullable', 'string', 'max:50'],
         ], [
             'catatan.required' => 'Catatan revisi wajib diisi agar pembuat dapat mengetahui perbaikan yang diperlukan.',
             'catatan.min' => 'Catatan revisi minimal 5 karakter.',
         ]);
 
-        $konten = $this->workflowService->revisi($konten, $request->user(), $request->input('catatan'));
+        $konten = $this->workflowService->revisi(
+            $konten,
+            $request->user(),
+            $request->input('catatan'),
+            $request->input('target_tahap')
+        );
 
         return response()->json([
-            'message' => 'Konten berhasil dikembalikan ke pembuat untuk perbaikan.',
+            'message' => 'Konten berhasil dikembalikan untuk perbaikan.',
             'data' => new KontenResource($konten),
         ]);
     }

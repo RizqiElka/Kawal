@@ -2,11 +2,11 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
-  FileText, Clock, AlertTriangle,
+  FileText, Clock, CheckCircle2,
   Globe, TrendingUp, ArrowRight, Eye, BarChart3
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
 import apiClient from '../api/client';
@@ -18,6 +18,7 @@ interface DashboardStats {
   total_konten: number;
   menunggu_persetujuan: number;
   perlu_revisi: number;
+  telah_disetujui?: number;
   telah_terbit: number;
   konten_per_bidang: { bidang: string; total: number }[];
   distribusi_status: { status: string; total: number }[];
@@ -50,8 +51,10 @@ const SkeletonCard = () => (
 );
 
 const DashboardPage: React.FC = () => {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, hasRole } = useAuth();
   const navigate = useNavigate();
+
+  const isPublisher = hasRole('publisher') && !user?.roles?.includes('admin');
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats'],
@@ -85,11 +88,11 @@ const DashboardPage: React.FC = () => {
       border: 'border-amber-100 dark:border-amber-900/50',
     },
     {
-      label: 'Perlu Direvisi',
-      value: stats?.perlu_revisi ?? 0,
-      icon: <AlertTriangle className="w-5 h-5" />,
-      color: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30',
-      border: 'border-rose-100 dark:border-rose-900/50',
+      label: isPublisher ? 'Siap Dipublikasikan' : 'Telah Disetujui',
+      value: stats?.telah_disetujui ?? 0,
+      icon: <CheckCircle2 className="w-5 h-5" />,
+      color: 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/30',
+      border: 'border-sky-100 dark:border-sky-900/50',
     },
     {
       label: 'Telah Diterbitkan',
@@ -142,24 +145,50 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* Charts Row */}
-      <div className="grid lg:grid-cols-3 gap-5">
-        {/* Bar Chart: Konten per Bidang */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
-          <div className="flex items-center gap-2 mb-5">
+      {/* Charts Row */}
+      <div className="grid lg:grid-cols-2 gap-5">
+        {/* Pie Chart: Konten per Bidang (Lingkaran) */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-5 h-5 text-sigap-600 dark:text-sigap-400" />
             <h3 className="font-bold text-slate-800 dark:text-slate-200">Konten per Bidang</h3>
           </div>
           {statsLoading ? (
-            <div className="h-48 bg-slate-100 dark:bg-slate-700 rounded-xl animate-pulse" />
+            <div className="h-56 bg-slate-100 dark:bg-slate-700 rounded-xl animate-pulse" />
+          ) : !stats?.konten_per_bidang?.length ? (
+            <div className="h-56 flex items-center justify-center text-xs text-slate-400">
+              Belum ada data konten per bidang
+            </div>
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={stats?.konten_per_bidang || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="bidang" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid #e2e8f0' }} />
-                <Bar dataKey="total" fill="#0252a2" radius={[6, 6, 0, 0]} name="Konten" />
-              </BarChart>
+            <ResponsiveContainer width="100%" height={230}>
+              <PieChart>
+                <Pie
+                  data={stats.konten_per_bidang}
+                  dataKey="total"
+                  nameKey="bidang"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={80}
+                  paddingAngle={3}
+                >
+                  {stats.konten_per_bidang.map((_, index) => {
+                    const BIDANG_COLORS = ['#0252a2', '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b'];
+                    return (
+                      <Cell key={`bidang-cell-${index}`} fill={BIDANG_COLORS[index % BIDANG_COLORS.length]} />
+                    );
+                  })}
+                </Pie>
+                <Tooltip
+                  formatter={(value) => [`${value} Konten`, 'Total']}
+                  contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid #e2e8f0' }}
+                />
+                <Legend
+                  formatter={(value) => value}
+                  iconSize={10}
+                  wrapperStyle={{ fontSize: 11 }}
+                />
+              </PieChart>
             </ResponsiveContainer>
           )}
         </div>
@@ -168,24 +197,28 @@ const DashboardPage: React.FC = () => {
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-sigap-600 dark:text-sigap-400" />
-            <h3 className="font-bold text-slate-800 dark:text-slate-200">Distribusi Status</h3>
+            <h3 className="font-bold text-slate-800 dark:text-slate-200">Distribusi Status Konten</h3>
           </div>
           {statsLoading ? (
-            <div className="h-48 bg-slate-100 dark:bg-slate-700 rounded-xl animate-pulse" />
+            <div className="h-56 bg-slate-100 dark:bg-slate-700 rounded-xl animate-pulse" />
+          ) : !stats?.distribusi_status?.length ? (
+            <div className="h-56 flex items-center justify-center text-xs text-slate-400">
+              Belum ada data status konten
+            </div>
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={230}>
               <PieChart>
                 <Pie
-                  data={stats?.distribusi_status || []}
+                  data={stats.distribusi_status}
                   dataKey="total"
                   nameKey="status"
                   cx="50%"
                   cy="50%"
-                  innerRadius={55}
+                  innerRadius={45}
                   outerRadius={80}
                   paddingAngle={3}
                 >
-                  {stats?.distribusi_status?.map((entry) => (
+                  {stats.distribusi_status.map((entry) => (
                     <Cell key={entry.status} fill={STATUS_COLORS[entry.status] || '#94a3b8'} />
                   ))}
                 </Pie>

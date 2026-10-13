@@ -20,7 +20,28 @@ class KontenPolicy
      */
     public function view(User $user, Konten $konten): bool
     {
-        if ($user->hasRole('admin') || $user->can('konten.lihat-semua-bidang')) {
+        // Admin, Kepala Dinas, dan Sekretaris dapat melihat seluruh konten
+        if ($user->hasRole('admin') || $user->hasRole('kepala') || $user->hasRole('sekretaris')) {
+            return true;
+        }
+
+        // Konten milik sendiri
+        if ($konten->user_id === $user->id) {
+            return true;
+        }
+
+        // Konten dalam bidang yang sama
+        if ($user->bidang_id !== null && $konten->bidang_id === $user->bidang_id) {
+            return true;
+        }
+
+        // Editor bisa melihat konten yang sedang di tahap persetujuan editor
+        if ($user->hasRole('editor') && $konten->status === 'diproses' && $konten->tahap_saat_ini === 'editor') {
+            return true;
+        }
+
+        // Publisher bisa melihat konten yang sudah disetujui atau sudah terbit
+        if ($user->hasRole('publisher') && in_array($konten->status, ['disetujui', 'terbit'])) {
             return true;
         }
 
@@ -29,8 +50,7 @@ class KontenPolicy
             return $konten->bidang_id === $user->bidang_id;
         }
 
-        // User biasa melihat konten sendiri atau konten dalam bidangnya
-        return $konten->user_id === $user->id || ($user->bidang_id !== null && $konten->bidang_id === $user->bidang_id);
+        return false;
     }
 
     /**
@@ -43,7 +63,9 @@ class KontenPolicy
 
     /**
      * Boleh mengubah konten.
-     * Hanya saat status 'draft' atau 'revisi' oleh pembuatnya atau admin.
+     * - Admin bisa edit semua.
+     * - Editor bisa mengedit konten yang sedang di tahap editor (status diproses, tahap_saat_ini=editor).
+     * - Penulis/pemilik konten bisa edit jika status draft atau revisi.
      */
     public function update(User $user, Konten $konten): bool
     {
@@ -51,6 +73,14 @@ class KontenPolicy
             return true;
         }
 
+        // Editor bisa mengedit konten yang sedang di tahap editor untuk penyuntingan naskah
+        if ($user->hasRole('editor') && $user->can('konten.ubah')) {
+            if ($konten->status === 'diproses' && $konten->tahap_saat_ini === 'editor') {
+                return true;
+            }
+        }
+
+        // Pemilik konten bisa edit jika masih draft atau revisi
         if (! in_array($konten->status, ['draft', 'revisi'])) {
             return false;
         }

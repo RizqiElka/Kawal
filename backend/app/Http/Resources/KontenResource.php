@@ -49,6 +49,10 @@ class KontenResource extends JsonResource
                 'nama' => $this->jenisKonten->nama,
                 'wajib_cek_5w1h' => (bool) $this->jenisKonten->wajib_cek_5w1h,
             ] : null,
+            'foto_sosmed_path' => $this->foto_sosmed_path,
+            'foto_sosmed_url' => $this->foto_sosmed_path
+                ? (str_starts_with($this->foto_sosmed_path, 'http') ? $this->foto_sosmed_path : Storage::disk('public')->url($this->foto_sosmed_path))
+                : null,
             'foto' => $this->foto->map(function ($f) {
                 return [
                     'id' => $f->id,
@@ -63,6 +67,7 @@ class KontenResource extends JsonResource
                     'id' => $p->id,
                     'tahap' => $p->tahap,
                     'aksi' => $p->aksi,
+                    'target_tahap' => $p->target_tahap,
                     'catatan' => $p->catatan,
                     'revisi_ke' => $p->revisi_ke,
                     'acted_at' => $p->acted_at?->toISOString(),

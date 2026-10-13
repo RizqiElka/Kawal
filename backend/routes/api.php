@@ -61,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Penerbitan & Multi-Channel Publisher
     Route::post('/konten/{konten}/publish', [PublisherController::class, 'publish']);
+    Route::delete('/publikasi/{publikasi}', [PublisherController::class, 'destroy']);
     Route::post('/publikasi/{publikasi}/retry', [PublisherController::class, 'retry']);
 
     // Manajemen Hak Akses & Role (Permission: role.kelola)
@@ -96,6 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifikasi', [NotificationController::class, 'index']);
     Route::post('/notifikasi/{id}/baca', [NotificationController::class, 'markAsRead']);
     Route::post('/notifikasi/baca-semua', [NotificationController::class, 'markAllAsRead']);
+
     // Pengaturan Sistem (requires permission)
     Route::middleware('can:pengaturan.kelola')->group(function () {
         Route::get('/pengaturan', [SettingController::class, 'index']);

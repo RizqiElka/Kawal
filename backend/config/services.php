@@ -31,4 +31,9 @@ return [
         ],
     ],
 
+    'sso' => [
+    'url'    => env('SSO_URL', 'http://localhost:8000'),
+    'secret' => env('SSO_CLIENT_SECRET', ''),
+],
+
 ];

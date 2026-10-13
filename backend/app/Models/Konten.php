@@ -21,6 +21,7 @@ class Konten extends Model
         'judul',
         'slug',
         'isi',
+        'foto_sosmed_path',
         'status',
         'tahap_saat_ini',
         'revisi_ke',

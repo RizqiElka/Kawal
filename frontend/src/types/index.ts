@@ -66,6 +66,7 @@ export interface Persetujuan {
   id: number;
   tahap: string;
   aksi: 'setujui' | 'revisi' | 'tolak';
+  target_tahap?: string;
   catatan?: string;
   revisi_ke: number;
   acted_at: string;
@@ -102,6 +103,8 @@ export interface Konten {
   judul: string;
   slug: string;
   isi: string;
+  foto_sosmed_path?: string;
+  foto_sosmed_url?: string;
   status: 'draft' | 'diproses' | 'revisi' | 'ditolak' | 'disetujui' | 'terbit';
   tahap_saat_ini?: string;
   revisi_ke: number;

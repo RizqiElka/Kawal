@@ -138,6 +138,7 @@ class DatabaseSeeder extends Seeder
             ],
             'editor' => [
                 'konten.lihat',
+                'konten.ubah',
                 'konten.setujui',
                 'konten.lihat-semua-bidang',
                 'dashboard.lihat-semua',

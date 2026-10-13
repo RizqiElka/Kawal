@@ -148,11 +148,12 @@ class WorkflowService
     }
 
     /**
-     * Mengembalikan konten untuk direvisi: catatan wajib, status menjadi 'revisi', alur kembali ke pembuat.
+     * Mengembalikan konten untuk direvisi: catatan wajib, status menjadi 'revisi' atau dikembalikan ke tahap sebelumnya.
+     * Jika targetTahap diset (misal 'penulis', 'kabid', dsb), disimpan di target_tahap dan notifikasi dikirimkan ke pihak terkait.
      */
-    public function revisi(Konten $konten, User $actor, string $catatan): Konten
+    public function revisi(Konten $konten, User $actor, string $catatan, ?string $targetTahap = null): Konten
     {
-        return DB::transaction(function () use ($konten, $actor, $catatan) {
+        return DB::transaction(function () use ($konten, $actor, $catatan, $targetTahap) {
             if ($konten->status !== 'diproses') {
                 throw ValidationException::withMessages([
                     'status' => ['Hanya konten yang sedang diproses yang dapat direvisi.'],
@@ -173,23 +174,44 @@ class WorkflowService
                 'tahap' => $currentKode,
                 'reviewer_id' => $actor->id,
                 'aksi' => 'revisi',
+                'target_tahap' => $targetTahap ?: 'penulis',
                 'catatan' => $catatan,
                 'revisi_ke' => $konten->revisi_ke,
                 'acted_at' => now(),
             ]);
 
-            $konten->status = 'revisi';
-            $konten->tahap_saat_ini = null;
-            $konten->save();
+            // Jika target adalah tahap sebelumnya (misal kabid) selain penulis:
+            if ($targetTahap && $targetTahap !== 'penulis') {
+                $konten->status = 'diproses';
+                $konten->tahap_saat_ini = $targetTahap;
+                $konten->revisi_ke += 1;
+                $konten->save();
 
-            // Notifikasi ke pembuat konten
-            $konten->user->notify(new WorkflowNotification(
-                $konten,
-                'revisi',
-                "Konten '{$konten->judul}' memerlukan perbaikan dari Anda pada tahap {$currentKode}.",
-                $actor->nama,
-                $catatan
-            ));
+                // Notifikasi ke reviewer tahap target (misal Kabid)
+                $targetReviewers = $this->getReviewersForStage($targetTahap, $konten->bidang_id);
+                foreach ($targetReviewers as $reviewer) {
+                    $reviewer->notify(new WorkflowNotification(
+                        $konten,
+                        'revisi',
+                        "Konten '{$konten->judul}' dikembalikan untuk perbaikan/peninjauan ulang oleh {$actor->nama} ke tahap {$targetTahap}.",
+                        $actor->nama,
+                        $catatan
+                    ));
+                }
+            } else {
+                $konten->status = 'revisi';
+                $konten->tahap_saat_ini = null;
+                $konten->save();
+
+                // Notifikasi ke pembuat konten
+                $konten->user->notify(new WorkflowNotification(
+                    $konten,
+                    'revisi',
+                    "Konten '{$konten->judul}' memerlukan perbaikan dari Anda pada tahap {$currentKode}.",
+                    $actor->nama,
+                    $catatan
+                ));
+            }
 
             return $konten->fresh(['persetujuan', 'user', 'bidang']);
         });

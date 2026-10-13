@@ -103,7 +103,7 @@ const App: React.FC = () => {
                 <Route
                   path="/konten/:id/edit"
                   element={
-                    <ProtectedRoute permission="konten.buat">
+                    <ProtectedRoute permission="konten.lihat">
                       <AppLayout>
                         <KontenFormPage />
                       </AppLayout>
@@ -183,7 +183,7 @@ const App: React.FC = () => {
               </Routes>
             </Suspense>
           </BrowserRouter>
-        </ToastProvider>
+          </ToastProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
