@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "npm --prefix frontend run dev",
+    "backend": "php backend/artisan serve",
     "build": "npm --prefix frontend run build"
   },
   "dependencies": {

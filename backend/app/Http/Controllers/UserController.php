@@ -7,23 +7,34 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
     /**
-     * Tampilkan daftar pengguna dengan filter dan pagination.
+     * Tampilkan daftar pengguna.
+     * Otomatis sinkron data pegawai dari SIPEG jika diperlukan secara transparan.
      */
     public function index(Request $request): JsonResponse
     {
-        $query = User::with(['bidang', 'roles'])->latest();
+
+
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = strtolower($request->input('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $allowedSort = ['nama', 'email', 'nip', 'jabatan', 'created_at'];
+        if (!in_array($sortBy, $allowedSort, true)) {
+            $sortBy = 'created_at';
+        }
+
+        $query = User::with(['bidang', 'roles'])->orderBy($sortBy, $sortOrder);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('nama', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('pegawai_id', 'like', "%{$search}%")
+                    ->orWhere('nip', 'like', "%{$search}%")
                     ->orWhere('jabatan', 'like', "%{$search}%");
             });
         }
@@ -59,8 +70,16 @@ class UserController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        if ($request->has('role') && !$request->has('roles')) {
+            $roleVal = $request->input('role');
+            if ($roleVal) {
+                $request->merge(['roles' => [$roleVal]]);
+            }
+        }
+
         $validated = $request->validate([
-            'pegawai_id' => ['required', 'string', 'max:50', 'unique:users,pegawai_id'],
+            'nip' => ['nullable', 'string', 'max:50'],
+            'pegawai_id' => ['nullable', 'string', 'max:50'],
             'nama' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:150', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
@@ -70,8 +89,6 @@ class UserController extends Controller
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['string', 'exists:roles,name'],
         ], [
-            'pegawai_id.required' => 'NIP / ID Pegawai wajib diisi.',
-            'pegawai_id.unique' => 'NIP / ID Pegawai sudah terdaftar.',
             'nama.required' => 'Nama pengguna wajib diisi.',
             'email.required' => 'Email wajib diisi.',
             'email.unique' => 'Email sudah terdaftar.',
@@ -80,8 +97,11 @@ class UserController extends Controller
             'roles.required' => 'Minimal pilih 1 role untuk pengguna.',
         ]);
 
+        $nip = $validated['nip'] ?? $validated['pegawai_id'] ?? null;
+
         $user = User::create([
-            'pegawai_id' => $validated['pegawai_id'],
+            'nip' => $nip,
+            'pegawai_id' => $nip,
             'nama' => $validated['nama'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
@@ -110,14 +130,22 @@ class UserController extends Controller
     }
 
     /**
-     * Perbarui data pengguna dan role.
+     * Perbarui data pengguna dan penentuan role di SIGAP.
      */
     public function update(Request $request, User $user): JsonResponse
     {
+        if ($request->has('role') && !$request->has('roles')) {
+            $roleVal = $request->input('role');
+            if ($roleVal) {
+                $request->merge(['roles' => [$roleVal]]);
+            }
+        }
+
         $validated = $request->validate([
-            'pegawai_id' => ['required', 'string', 'max:50', Rule::unique('users', 'pegawai_id')->ignore($user->id)],
-            'nama' => ['required', 'string', 'max:150'],
-            'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
+            'nip' => ['nullable', 'string', 'max:50'],
+            'pegawai_id' => ['nullable', 'string', 'max:50'],
+            'nama' => ['sometimes', 'required', 'string', 'max:150'],
+            'email' => ['sometimes', 'required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => ['nullable', 'string', 'min:6'],
             'bidang_id' => ['nullable', 'exists:bidang,id'],
             'jabatan' => ['nullable', 'string', 'max:100'],
@@ -125,21 +153,24 @@ class UserController extends Controller
             'roles' => ['nullable', 'array'],
             'roles.*' => ['string', 'exists:roles,name'],
         ], [
-            'pegawai_id.required' => 'NIP / ID Pegawai wajib diisi.',
-            'pegawai_id.unique' => 'NIP / ID Pegawai sudah terdaftar.',
             'nama.required' => 'Nama pengguna wajib diisi.',
             'email.required' => 'Email wajib diisi.',
             'email.unique' => 'Email sudah terdaftar.',
             'password.min' => 'Kata sandi minimal 6 karakter.',
         ]);
 
-        $updateData = [
-            'pegawai_id' => $validated['pegawai_id'],
-            'nama' => $validated['nama'],
-            'email' => $validated['email'],
-            'bidang_id' => $validated['bidang_id'] ?? null,
-            'jabatan' => $validated['jabatan'] ?? null,
-        ];
+        $updateData = [];
+
+        if (isset($validated['nama'])) $updateData['nama'] = $validated['nama'];
+        if (isset($validated['email'])) $updateData['email'] = $validated['email'];
+        if (array_key_exists('bidang_id', $validated)) $updateData['bidang_id'] = $validated['bidang_id'];
+        if (array_key_exists('jabatan', $validated)) $updateData['jabatan'] = $validated['jabatan'];
+
+        if (isset($validated['nip']) || isset($validated['pegawai_id'])) {
+            $nipVal = $validated['nip'] ?? $validated['pegawai_id'];
+            $updateData['nip'] = $nipVal;
+            $updateData['pegawai_id'] = $nipVal;
+        }
 
         if (isset($validated['is_active'])) {
             $updateData['is_active'] = $validated['is_active'];
@@ -156,7 +187,7 @@ class UserController extends Controller
         }
 
         return response()->json([
-            'message' => 'Data pengguna berhasil diperbarui.',
+            'message' => 'Data pengguna & role berhasil diperbarui.',
             'data' => new UserResource($user->load(['bidang', 'roles'])),
         ]);
     }
@@ -200,3 +231,4 @@ class UserController extends Controller
         ]);
     }
 }
+

@@ -178,6 +178,30 @@ const LoginPage: React.FC = () => {
                 </>
               )}
             </button>
+
+            {/* Divider */}
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="px-3 bg-white dark:bg-slate-800/60 text-xs text-slate-400">atau</span>
+              </div>
+            </div>
+
+            {/* Tombol SSO SIPEG */}
+            <a
+              id="btn-login-sso"
+              href={`${import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8000'}/sso/login`}
+              className="w-full py-3.5 border-2 border-sigap-300 dark:border-sigap-700 text-sigap-700 dark:text-sigap-300 font-semibold rounded-xl hover:bg-sigap-50 dark:hover:bg-sigap-900/30 transition flex items-center justify-center gap-2.5 text-sm group"
+            >
+              {/* Icon SIPEG */}
+              <svg className="w-5 h-5 text-sigap-600 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              Login dengan SSO SIPEG
+            </a>
           </form>
 
           {/* Demo Credentials */}

@@ -49,10 +49,24 @@ const PublisherPage: React.FC = () => {
   const { data: approvedKonten, isLoading: isLoadingKonten } = useQuery<Konten[]>({
     queryKey: ['konten-approved-list'],
     queryFn: async () => {
-      const res = await apiClient.get('/konten?per_page=100');
-      // Tampilkan konten yang disetujui atau sudah terbit
-      return (res.data.data as Konten[]).filter((k) => ['disetujui', 'terbit'].includes(k.status));
+      const res = await apiClient.get('/konten?per_page=100&status=disetujui');
+      // Hanya tampilkan konten yang DISETUJUI — konten yang sudah terbit
+      // dikelola melalui ikon "Edit Publikasi" di halaman Daftar Konten
+      return (res.data.data as Konten[]).filter((k) => k.status === 'disetujui');
     },
+  });
+
+  // Fetch konten yang sudah terbit jika diakses langsung via URL param (dari ikon Edit Publikasi)
+  const { data: preselectedTerbit } = useQuery<Konten | null>({
+    queryKey: ['konten-terbit-preselected', preselectedKontenId],
+    queryFn: async () => {
+      if (!preselectedKontenId) return null;
+      // Cek apakah sudah ada di approvedKonten — jika tidak, fetch manual
+      const res = await apiClient.get(`/konten/${preselectedKontenId}`);
+      const k = res.data.data as Konten;
+      return k.status === 'terbit' ? k : null;
+    },
+    enabled: !!preselectedKontenId,
   });
 
   const { data: kanals } = useQuery<KanalPublikasi[]>({
@@ -70,7 +84,9 @@ const PublisherPage: React.FC = () => {
     }
   }, [approvedKonten, selectedKontenId]);
 
-  const selectedKonten = approvedKonten?.find((k) => k.id === selectedKontenId);
+  // selectedKonten bisa berasal dari daftar disetujui ATAU konten terbit yang diakses langsung
+  const selectedKonten = approvedKonten?.find((k) => k.id === selectedKontenId)
+    ?? (preselectedTerbit?.id === selectedKontenId ? preselectedTerbit : undefined);
 
   // Inisialisasi data form ketika memilih konten atau ketika data kanal tersedia
   useEffect(() => {
@@ -151,7 +167,7 @@ const PublisherPage: React.FC = () => {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Pendataan & Manajemen Publikasi</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-          Kelola dan catat tautan (link post) serta waktu tayang konten yang telah dipublikasikan ke website atau akun media sosial instansi.
+          Catat link tayang & waktu terbit untuk konten yang baru disetujui. Konten berstatus Terbit dapat diperbarui datanya melalui ikon di halaman Daftar Konten.
         </p>
       </div>
 
@@ -159,8 +175,8 @@ const PublisherPage: React.FC = () => {
         {/* Kolom Kiri: Daftar Konten Siap Didata */}
         <div className="lg:col-span-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col h-[700px]">
           <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
-            <h2 className="font-bold text-slate-800 dark:text-slate-200">Daftar Konten Siap Publikasi</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Pilih konten untuk mendata hasil terbit</p>
+            <h2 className="font-bold text-slate-800 dark:text-slate-200">Konten Menunggu Publikasi</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Konten disetujui yang belum didata tayangannya</p>
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-700 overflow-y-auto flex-1">
@@ -170,8 +186,9 @@ const PublisherPage: React.FC = () => {
               ))
             ) : !approvedKonten?.length ? (
               <div className="py-16 text-center px-4">
-                <CheckCircle2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Belum ada konten yang disetujui untuk diterbitkan.</p>
+                <CheckCircle2 className="w-10 h-10 text-emerald-300 mx-auto mb-2" />
+                <p className="text-slate-700 dark:text-slate-300 text-sm font-semibold">Semua konten sudah dipublikasi!</p>
+                <p className="text-slate-400 text-xs mt-1">Tidak ada konten disetujui yang menunggu pendataan.</p>
               </div>
             ) : (
               approvedKonten.map((k) => {
@@ -214,8 +231,12 @@ const PublisherPage: React.FC = () => {
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 space-y-6">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs uppercase tracking-wider font-bold text-sigap-700 dark:text-sigap-400">
-                    Form Pencatatan Publikasi
+                  <span className={`text-xs uppercase tracking-wider font-bold ${
+                    selectedKonten.status === 'terbit'
+                      ? 'text-emerald-700 dark:text-emerald-400'
+                      : 'text-sigap-700 dark:text-sigap-400'
+                  }`}>
+                    {selectedKonten.status === 'terbit' ? 'Perbarui Data Publikasi' : 'Form Pencatatan Publikasi'}
                   </span>
                   <StatusBadge status={selectedKonten.status} />
                 </div>
@@ -317,10 +338,19 @@ const PublisherPage: React.FC = () => {
                   type="button"
                   onClick={() => savePublicationMutation.mutate()}
                   disabled={savePublicationMutation.isPending}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-sigap-700 text-white font-semibold text-sm rounded-xl hover:bg-sigap-800 disabled:opacity-50 transition shadow-md shadow-sigap-200"
+                  className={`flex items-center gap-2 px-6 py-2.5 text-white font-semibold text-sm rounded-xl disabled:opacity-50 transition shadow-md ${
+                    selectedKonten?.status === 'terbit'
+                      ? 'bg-emerald-700 hover:bg-emerald-800 shadow-emerald-200'
+                      : 'bg-sigap-700 hover:bg-sigap-800 shadow-sigap-200'
+                  }`}
                 >
                   <Save className="w-4 h-4" />
-                  {savePublicationMutation.isPending ? 'Menyimpan...' : 'Simpan Data Publikasi'}
+                  {savePublicationMutation.isPending
+                    ? 'Menyimpan...'
+                    : selectedKonten?.status === 'terbit'
+                      ? 'Perbarui Data Publikasi'
+                      : 'Simpan Data Publikasi'
+                  }
                 </button>
               </div>
 

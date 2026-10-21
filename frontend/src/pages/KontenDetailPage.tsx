@@ -253,16 +253,16 @@ const KontenDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Grid Foto: Foto Berita Lanskap 16:9 & Foto Sosmed 1:1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+      {/* Grid Foto: Ukuran Ringkas & Proporsional (Tidak Memenuhi Layar) */}
+      <div className="flex flex-wrap lg:flex-nowrap gap-4 items-start">
         {/* Photos Lanskap */}
         {konten.foto?.length > 0 && (
-          <div className={`${konten.foto_sosmed_url ? 'lg:col-span-2' : 'lg:col-span-3'} bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col`}>
-            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Foto Berita (16:9)</span>
-              <span className="text-[11px] text-slate-400">Klik foto untuk memperbesar</span>
+          <div className="w-full max-w-xl bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs overflow-hidden flex flex-col">
+            <div className="px-3.5 py-2 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Foto Berita (16:9)</span>
+              <span className="text-[11px] text-slate-400">Klik untuk memperbesar</span>
             </div>
-            {/* Foto Utama - Batasi tinggi agar tidak memenuhi layar */}
+            {/* Foto Utama - Batasi tinggi & proporsional */}
             <div
               onClick={() => {
                 const url = konten.foto[activePhoto]?.url?.startsWith('http')
@@ -270,33 +270,33 @@ const KontenDetailPage: React.FC = () => {
                   : `${STORAGE_URL}/${konten.foto[activePhoto]?.path}`;
                 setSelectedImageModal({ url, caption: konten.foto[activePhoto]?.caption });
               }}
-              className="relative aspect-video max-h-[360px] bg-slate-900 cursor-zoom-in group overflow-hidden flex items-center justify-center"
+              className="relative aspect-video max-h-[250px] sm:max-h-[270px] bg-slate-950 cursor-zoom-in group overflow-hidden flex items-center justify-center"
             >
               <img
                 src={konten.foto[activePhoto]?.url?.startsWith('http') ? konten.foto[activePhoto].url : `${STORAGE_URL}/${konten.foto[activePhoto]?.path}`}
                 alt={`Foto ${activePhoto + 1}`}
                 className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                <span className="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full font-medium shadow">
-                  Klik untuk melihat ukuran penuh
+              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                <span className="bg-black/75 text-white text-[11px] px-3 py-1 rounded-full font-medium shadow-sm backdrop-blur-xs">
+                  Perbesar foto
                 </span>
               </div>
               {konten.foto[activePhoto]?.caption && (
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 py-2.5">
-                  <p className="text-white text-xs leading-relaxed line-clamp-2">{konten.foto[activePhoto].caption}</p>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 py-1.5">
+                  <p className="text-white text-xs leading-relaxed line-clamp-1">{konten.foto[activePhoto].caption}</p>
                 </div>
               )}
             </div>
             {/* Thumbnail list */}
             {konten.foto.length > 1 && (
-              <div className="flex gap-2 p-3 bg-slate-50/50 dark:bg-slate-900/30 overflow-x-auto border-t border-slate-100 dark:border-slate-700">
+              <div className="flex gap-2 p-2 bg-slate-50/70 dark:bg-slate-900/40 overflow-x-auto border-t border-slate-100 dark:border-slate-700">
                 {konten.foto.map((f, i) => (
                   <button
                     key={i}
                     onClick={() => setActivePhoto(i)}
-                    className={`w-20 aspect-video rounded-lg overflow-hidden border-2 transition shrink-0 ${
-                      i === activePhoto ? 'border-sigap-600 shadow-sm scale-105' : 'border-slate-200 dark:border-slate-700 opacity-60 hover:opacity-100'
+                    className={`w-16 aspect-video rounded-lg overflow-hidden border-2 transition shrink-0 ${
+                      i === activePhoto ? 'border-blue-600 shadow-xs scale-105' : 'border-slate-200 dark:border-slate-700 opacity-60 hover:opacity-100'
                     }`}
                   >
                     <img
@@ -313,27 +313,24 @@ const KontenDetailPage: React.FC = () => {
 
         {/* Foto Sosmed 1:1 */}
         {konten.foto_sosmed_url && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
-            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Foto Media Sosial (1:1)</span>
-              <span className="text-[10px] bg-sigap-50 dark:bg-sigap-900/30 text-sigap-700 dark:text-sigap-400 font-semibold px-2 py-0.5 rounded-full">Kanal IG / FB</span>
+          <div className="w-full sm:w-60 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs overflow-hidden flex flex-col shrink-0">
+            <div className="px-3.5 py-2 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Sosmed (1:1)</span>
+              <span className="text-[10px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold px-2 py-0.5 rounded-full">IG / FB</span>
             </div>
             <div
               onClick={() => setSelectedImageModal({ url: konten.foto_sosmed_url!, caption: 'Foto Media Sosial (1:1 Persegi)' })}
-              className="relative aspect-square max-h-[360px] bg-slate-900 cursor-zoom-in group overflow-hidden flex items-center justify-center"
+              className="relative aspect-square max-h-[250px] sm:max-h-[270px] bg-slate-950 cursor-zoom-in group overflow-hidden flex items-center justify-center"
             >
               <img
                 src={konten.foto_sosmed_url}
                 alt="Foto Khusus Media Sosial"
                 className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                <span className="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full font-medium shadow">
-                  Klik untuk melihat
+              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                <span className="bg-black/75 text-white text-[11px] px-3 py-1 rounded-full font-medium shadow-sm backdrop-blur-xs">
+                  Perbesar foto
                 </span>
-              </div>
-              <div className="absolute bottom-2 left-2">
-                <span className="text-[11px] bg-black/60 text-white px-2 py-0.5 rounded-full">1:1 Persegi</span>
               </div>
             </div>
           </div>
@@ -397,54 +394,62 @@ const KontenDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Action Row */}
-      {(canApprove || canSubmit || canUpdate) && (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5 flex flex-wrap gap-3">
+      {/* Action Row - Tombol Aksi Kompak & Proporsional */}
+      {(canApprove || canSubmit || canUpdate || (konten.permissions?.can_publish && ['disetujui', 'terbit'].includes(konten.status))) && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs p-3 sm:p-3.5 flex flex-wrap items-center gap-2">
           {canUpdate && (
             <button
               onClick={() => navigate(`/konten/${konten.id}/edit`)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-sm rounded-xl hover:bg-slate-200 transition"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium text-xs sm:text-sm rounded-xl transition"
             >
-              Edit Konten
+              <span>Edit Konten</span>
             </button>
           )}
           {canSubmit && ['draft', 'revisi'].includes(konten.status) && (
             <button
               onClick={() => actionMutation.mutate({ action: 'submit', catatan: '' })}
               disabled={actionMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2.5 bg-sigap-700 text-white font-semibold text-sm rounded-xl hover:bg-sigap-800 transition shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm rounded-xl shadow-xs transition"
             >
-              Ajukan ke Kabid
+              <span>Ajukan ke Kabid</span>
             </button>
           )}
           {canApprove && konten.status === 'diproses' && (
             <>
               <button
                 onClick={() => setModal('approve')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-semibold text-sm rounded-xl hover:bg-emerald-700 transition"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs sm:text-sm rounded-xl shadow-xs transition"
               >
-                <CheckCircle2 className="w-4 h-4" /> Setujui
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Setujui</span>
               </button>
               <button
                 onClick={() => setModal('revisi')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-white font-semibold text-sm rounded-xl hover:bg-amber-600 transition"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs sm:text-sm rounded-xl shadow-xs transition"
               >
-                <RotateCcw className="w-4 h-4" /> Revisi
+                <RotateCcw className="w-4 h-4" />
+                <span>Revisi</span>
               </button>
               <button
                 onClick={() => setModal('tolak')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-rose-600 text-white font-semibold text-sm rounded-xl hover:bg-rose-700 transition"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs sm:text-sm rounded-xl shadow-xs transition"
               >
-                <XCircle className="w-4 h-4" /> Tolak
+                <XCircle className="w-4 h-4" />
+                <span>Tolak</span>
               </button>
             </>
           )}
           {konten.permissions?.can_publish && ['disetujui', 'terbit'].includes(konten.status) && (
             <button
               onClick={() => navigate(`/publisher?konten_id=${konten.id}`)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-sigap-900 text-white font-semibold text-sm rounded-xl hover:bg-sigap-950 transition"
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-white font-medium text-xs sm:text-sm rounded-xl shadow-xs transition ${
+                konten.status === 'terbit'
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                  : 'bg-slate-900 hover:bg-slate-800'
+              }`}
             >
-              <Globe className="w-4 h-4" /> Pendataan Publikasi
+              <Globe className="w-4 h-4" />
+              <span>{konten.status === 'terbit' ? 'Perbarui Data Publikasi' : 'Catat Publikasi'}</span>
             </button>
           )}
         </div>

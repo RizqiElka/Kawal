@@ -9,6 +9,7 @@ import { ThemeProvider } from './context/ThemeContext';
 
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const JenisKontenPage = React.lazy(() => import('./pages/JenisKontenPage'));
+const SsoCallbackPage = React.lazy(() => import('./pages/SsoCallbackPage'));
 
 // Lazy-loaded pages
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
@@ -54,6 +55,9 @@ const App: React.FC = () => {
               <Routes>
                 {/* Public */}
                 <Route path="/login" element={<LoginPage />} />
+
+                {/* SSO Callback — menerima redirect dari backend SIGAP setelah tukar code ke SIPEG */}
+                <Route path="/sso/callback" element={<SsoCallbackPage />} />
 
                 {/* Protected – wrapped in AppLayout */}
                 <Route

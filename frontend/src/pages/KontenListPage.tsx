@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Eye, Edit, Trash2,
-  ChevronLeft, ChevronRight, FileText
+  ChevronLeft, ChevronRight, FileText, Globe
 } from 'lucide-react';
 import apiClient from '../api/client';
 import type { Konten } from '../types';
@@ -205,9 +205,18 @@ const KontenListPage: React.FC = () => {
                           <button
                             onClick={() => navigate(`/konten/${k.id}/edit`)}
                             className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition"
-                            title="Edit"
+                            title="Edit Konten"
                           >
                             <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {k.permissions?.can_publish && k.status === 'terbit' && (
+                          <button
+                            onClick={() => navigate(`/publisher?konten_id=${k.id}`)}
+                            className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition"
+                            title="Perbarui Data Publikasi"
+                          >
+                            <Globe className="w-4 h-4" />
                           </button>
                         )}
                         {k.permissions?.can_delete && (

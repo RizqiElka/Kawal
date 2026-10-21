@@ -91,6 +91,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update']);
         Route::patch('/users/{user}/toggle-active', [UserController::class, 'toggleActive']);
         Route::delete('/users/{user}', [UserController::class, 'destroy']);
+        Route::post('/users/sync-sipeg', [\App\Http\Controllers\SsoController::class, 'syncFromSipeg']);
+        Route::post('/pengguna/sync-sipeg', [\App\Http\Controllers\SsoController::class, 'syncFromSipeg']);
     });
 
     // Notifikasi (alias baru yang dipakai frontend)
@@ -105,3 +107,4 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
 });
+

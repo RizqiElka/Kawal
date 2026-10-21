@@ -33,12 +33,16 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'sipeg_user_id',
+        'pegawai_id',
         'nama',
         'email',
         'password',
+        'nip',
         'bidang_id',
         'jabatan',
         'is_active',
+        'last_synced_at',
     ];
 
     /**
@@ -61,6 +65,7 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'last_synced_at' => 'datetime',
         ];
     }
 
@@ -90,3 +95,4 @@ class User extends Authenticatable
         return $this->hasMany(Persetujuan::class, 'reviewer_id');
     }
 }
+
