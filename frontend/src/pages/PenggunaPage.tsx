@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  UserPlus,
   Edit2,
   Trash2,
   Search,
@@ -209,17 +208,6 @@ const PenggunaPage: React.FC = () => {
             Data pegawai otomatis ditarik dari SIPEG Bapperida. Admin dapat mengatur role dan hak akses untuk alur persetujuan konten.
           </p>
         </div>
-
-        {/* Tombol Tambah Pengguna Proporsional */}
-        <div className="shrink-0">
-          <button
-            onClick={() => { setEditingUser(null); setShowModal(true); }}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl shadow-xs hover:shadow transition"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Tambah Pengguna</span>
-          </button>
-        </div>
       </div>
 
       {/* Filter & Search Bar (Filter Bidang Dihilangkan) */}
@@ -293,7 +281,7 @@ const PenggunaPage: React.FC = () => {
               Gagal memuat data pengguna
             </div>
             <p className="text-slate-500 text-sm mb-4">
-              Terjadi kendala koneksi ke server backend SIGAP.
+              Terjadi kendala koneksi ke server backend KAWAL.
             </p>
             <button
               onClick={() => refetch()}
@@ -537,7 +525,7 @@ const UserRoleModal: React.FC<{
               Atur Role & Akses Pengguna
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Penetapan hak akses alur persetujuan konten di SIGAP
+              Penetapan hak akses alur persetujuan konten di KAWAL
             </p>
           </div>
           <button
@@ -555,7 +543,7 @@ const UserRoleModal: React.FC<{
             <div>
               <span className="font-semibold">Data Pegawai Tersinkronisasi Otomatis</span>
               <p className="text-blue-700 dark:text-blue-300/80 text-[11px] mt-0.5">
-                Profil pegawai (Nama, NIP, Jabatan, Bidang) ditarik dari SIPEG Bapperida. Perubahan data pegawai dilakukan melalui SIPEG. Di sini Anda hanya mengatur <b>Role di SIGAP</b>.
+                Profil pegawai (Nama, NIP, Jabatan, Bidang) ditarik dari SIPEG Bapperida. Perubahan data pegawai dilakukan melalui SIPEG. Di sini Anda hanya mengatur <b>Role di KAWAL</b>.
               </p>
             </div>
           </div>
@@ -603,7 +591,7 @@ const UserRoleModal: React.FC<{
           {/* Bagian Edit Role (Satu-satunya yang dapat diubah) */}
           <div className="space-y-2">
             <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
-              Pilih Role di SIGAP <span className="text-rose-500">*</span>
+              Pilih Role di KAWAL <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-600 dark:text-blue-400 pointer-events-none" />

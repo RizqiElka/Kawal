@@ -1,5 +1,5 @@
 {
-  "name": "sigap-monorepo",
+  "name": "kawal-monorepo",
   "private": true,
   "scripts": {
     "dev": "npm --prefix frontend run dev",

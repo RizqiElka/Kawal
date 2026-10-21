@@ -30,7 +30,7 @@ const LoginPage: React.FC = () => {
   const onSubmit = async (data: LoginForm) => {
     try {
       await login(data.login, data.password);
-      toast.success('Selamat datang di SIGAP!');
+      toast.success('Selamat datang di KAWAL!');
       navigate('/dashboard');
     } catch (err: any) {
       const errorData = err?.response?.data;
@@ -59,9 +59,9 @@ const LoginPage: React.FC = () => {
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
               <ShieldCheck className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-wide">SIGAP</span>
+            <span className="text-xl font-bold tracking-wide">KAWAL</span>
           </div>
-          <p className="text-sigap-200 text-sm">Sistem Informasi Genggam Alur Publikasi</p>
+          <p className="text-sigap-200 text-sm">Platform Pengawalan Alur & Publikasi Konten</p>
         </div>
 
         <div className="relative z-10 space-y-6">
@@ -90,7 +90,7 @@ const LoginPage: React.FC = () => {
         </div>
 
         <div className="relative z-10 text-sigap-300 text-xs">
-          © {new Date().getFullYear()} Pemerintah Daerah — SIGAP Platform
+          © {new Date().getFullYear()} Pemerintah Daerah — KAWAL Platform
         </div>
       </div>
 
@@ -102,7 +102,7 @@ const LoginPage: React.FC = () => {
             <div className="w-9 h-9 bg-sigap-700 rounded-xl flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-sigap-900">SIGAP</span>
+            <span className="text-xl font-bold text-sigap-900">KAWAL</span>
           </div>
 
           <div className="mb-8">
@@ -174,7 +174,7 @@ const LoginPage: React.FC = () => {
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  Masuk ke SIGAP
+                  Masuk ke KAWAL
                 </>
               )}
             </button>

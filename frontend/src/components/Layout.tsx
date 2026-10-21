@@ -83,8 +83,8 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, o
               <ShieldCheck className="w-5.5 h-5.5 text-sigap-300" />
             </div>
             <div>
-              <div className="font-bold text-sm tracking-wide text-white">SIGAP</div>
-              <div className="text-sigap-400 text-xs leading-tight">Publikasi Instansi</div>
+              <div className="font-bold text-sm tracking-wide text-white">KAWAL</div>
+              <div className="text-sigap-400 text-xs leading-tight">Kelola Alur Warta, Artikel, dan Laporan </div>
             </div>
           </div>
           <button onClick={onClose} className="lg:hidden text-sigap-400 hover:text-white p-1">
@@ -221,7 +221,7 @@ export const Topbar: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
                 className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-700 transition"
               >
                 <LogOut className="w-4 h-4" />
-                Keluar dari SIGAP
+                Keluar dari KAWAL
               </button>
             </div>
           )}
