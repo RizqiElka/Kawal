@@ -140,10 +140,10 @@ class SsoController extends Controller
             now()->addHours(8)
         )->plainTextToken;
 
-        $frontendUrl = config('sso.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
+        $frontendUrl = config('sso.frontend_url', env('FRONTEND_URL', 'http://localhost:8001'));
 
         return redirect()->away(
-            $frontendUrl . '/sso/callback'
+            rtrim($frontendUrl, '/') . '/sso-callback'
             . '?token=' . urlencode($sigapToken)
             . '&role=' . urlencode($sigapRole)
         );
@@ -298,10 +298,10 @@ class SsoController extends Controller
      */
     private function redirectWithError(string $message)
     {
-        $frontendUrl = config('sso.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
+        $frontendUrl = config('sso.frontend_url', env('FRONTEND_URL', 'http://localhost:8001'));
 
         return redirect()->away(
-            $frontendUrl . '/login?error=' . urlencode($message)
+            rtrim($frontendUrl, '/') . '/login?error=' . urlencode($message)
         );
     }
 }

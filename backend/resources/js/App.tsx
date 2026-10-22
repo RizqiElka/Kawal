@@ -58,6 +58,7 @@ const App: React.FC = () => {
 
                 {/* SSO Callback — menerima redirect dari backend SIGAP setelah tukar code ke SIPEG */}
                 <Route path="/sso/callback" element={<SsoCallbackPage />} />
+                <Route path="/sso-callback" element={<SsoCallbackPage />} />
 
                 {/* Protected – wrapped in AppLayout */}
                 <Route
