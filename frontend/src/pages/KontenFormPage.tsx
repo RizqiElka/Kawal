@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  X, ImagePlus, AlertCircle, Send, Save, ChevronLeft
+  X, ImagePlus, AlertCircle, Send, Save, ChevronLeft, Video
 } from 'lucide-react';
 import apiClient from '../api/client';
 import { TipTapEditor } from '../components/TipTapEditor';
@@ -22,6 +22,7 @@ const kontenSchema = z.object({
   judul: z.string().min(5, 'Judul minimal 5 karakter').max(MAX_TITLE, `Judul maksimal ${MAX_TITLE} karakter`),
   jenis_konten_id: z.string().min(1, 'Jenis konten wajib dipilih'),
   isi: z.string().min(1, 'Isi konten wajib diisi'),
+  video_url: z.string().max(500).optional(),
 });
 
 type KontenFormData = z.infer<typeof kontenSchema>;
@@ -38,7 +39,8 @@ const KontenFormPage: React.FC = () => {
   const isEdit = !!id;
   const navigate = useNavigate();
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
+  const isEditorOrAdmin = hasRole('editor') || hasRole('admin');
   const queryClient = useQueryClient();
 
   const [photos, setPhotos] = useState<PhotoSlot[]>([
@@ -107,11 +109,13 @@ const KontenFormPage: React.FC = () => {
       judul: existingKonten?.judul || '',
       jenis_konten_id: existingKonten?.jenis_konten_id?.toString() || '',
       isi: existingKonten?.isi || '',
+      video_url: existingKonten?.video_url || '',
     },
     values: existingKonten ? {
       judul: existingKonten.judul,
       jenis_konten_id: existingKonten.jenis_konten_id.toString(),
       isi: existingKonten.isi,
+      video_url: existingKonten.video_url || '',
     } : undefined,
   });
 
@@ -123,6 +127,7 @@ const KontenFormPage: React.FC = () => {
       formData.append('judul', data.judul);
       formData.append('jenis_konten_id', data.jenis_konten_id);
       formData.append('isi', data.isi);
+      formData.append('video_url', data.video_url?.trim() || '');
       if (user?.bidang_id) {
         formData.append('bidang_id', String(user.bidang_id));
       }
@@ -140,11 +145,13 @@ const KontenFormPage: React.FC = () => {
         formData.append(`captions[${i}]`, p.caption);
       });
 
-      // Foto Sosmed
-      if (fotoSosmed.blob) {
-        formData.append('foto_sosmed', fotoSosmed.blob, 'foto_sosmed.jpg');
-      } else if (fotoSosmed.deleteExisting) {
-        formData.append('hapus_foto_sosmed', '1');
+      // Foto Sosmed (Hanya dikirim jika user adalah Editor atau Admin)
+      if (isEditorOrAdmin) {
+        if (fotoSosmed.blob) {
+          formData.append('foto_sosmed', fotoSosmed.blob, 'foto_sosmed.jpg');
+        } else if (fotoSosmed.deleteExisting) {
+          formData.append('hapus_foto_sosmed', '1');
+        }
       }
 
       if (isEdit) {
@@ -177,6 +184,11 @@ const KontenFormPage: React.FC = () => {
   });
 
   const handleFileSelect = (index: number, file: File) => {
+    if (file.size > 1 * 1024 * 1024) {
+      toast.error('Ukuran file foto maksimal 1 MB.');
+      if (fileInputRefs.current[index]) fileInputRefs.current[index].value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       const src = e.target?.result as string;
@@ -189,6 +201,11 @@ const KontenFormPage: React.FC = () => {
   };
 
   const handleSosmedFileSelect = (file: File) => {
+    if (file.size > 1 * 1024 * 1024) {
+      toast.error('Ukuran file foto media sosial maksimal 1 MB.');
+      if (sosmedInputRef.current) sosmedInputRef.current.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       const src = e.target?.result as string;
@@ -313,6 +330,9 @@ const KontenFormPage: React.FC = () => {
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Wajib unggah minimal 1 foto (maksimal 3). Sistem akan membantu memotong ke rasio 16:9 (lanskap).
                 </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
+                  Format yang didukung: JPG, JPEG, PNG, WEBP (Maksimal 1 MB per foto).
+                </p>
               </div>
               <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                 photosReady ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
@@ -377,64 +397,94 @@ const KontenFormPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Kolom Khusus: Foto Sosmed (1:1 Persegi) */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+          {/* Tautan Video Konten (Basis Link) */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm space-y-2">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                  <span>Foto Media Sosial</span>
-                  <span className="text-xs font-normal text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">Opsional</span>
+                <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 text-sm">
+                  <Video className="w-4 h-4 text-rose-500" />
+                  <span>Tautan Video Konten</span>
+                  <span className="text-xs font-normal text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">Basis Link (Opsional)</span>
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Foto khusus untuk kanal Instagram, Facebook, X, dan TikTok (Rasio 1:1 Persegi).
+                  Masukkan link video pendukung dari YouTube, TikTok, Reels, atau Google Drive.
                 </p>
               </div>
             </div>
 
-            <div className="max-w-xs">
-              <div
-                className={`relative aspect-square rounded-2xl overflow-hidden border-2 border-dashed cursor-pointer transition ${
-                  fotoSosmed.preview ? 'border-transparent' : 'border-slate-300 dark:border-slate-600 hover:border-sigap-400 dark:hover:border-sigap-500 bg-slate-50 dark:bg-slate-900/50'
-                }`}
-                onClick={() => !fotoSosmed.preview && sosmedInputRef.current?.click()}
-              >
-                {fotoSosmed.preview ? (
-                  <>
-                    <img src={fotoSosmed.preview} alt="Foto Sosmed" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); removeFotoSosmed(); }}
-                      className="absolute top-2 right-2 w-7 h-7 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-black/80 transition"
-                      title="Hapus foto sosmed"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                    <div className="absolute bottom-2 left-2">
-                      <span className="text-xs bg-black/60 text-white px-2.5 py-1 rounded-full font-medium">1:1 Sosmed</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full gap-2 p-4 text-center">
-                    <ImagePlus className="w-10 h-10 text-slate-300" />
-                    <div>
-                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">Pilih Foto Sosmed</span>
-                      <span className="text-[11px] text-slate-400">Rasio 1:1 Persegi</span>
-                    </div>
-                  </div>
-                )}
-                <input
-                  ref={sosmedInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleSosmedFileSelect(file);
-                  }}
-                />
-              </div>
+            <div className="pt-1">
+              <input
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=... atau https://www.tiktok.com/@..."
+                {...register('video_url')}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
+              />
             </div>
           </div>
+
+          {/* Kolom Khusus: Foto Sosmed (1:1 Persegi) - KHUSUS ROLE EDITOR / ADMIN */}
+          {isEditorOrAdmin && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <span>Foto Media Sosial (1:1 Persegi)</span>
+                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full border border-blue-200">Editor</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Foto persegi untuk kanal Instagram, Facebook, dan media sosial (Rasio 1:1).
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
+                    Format yang didukung: JPG, JPEG, PNG, WEBP (Maksimal 1 MB).
+                  </p>
+                </div>
+              </div>
+
+              <div className="max-w-xs">
+                <div
+                  className={`relative aspect-square rounded-2xl overflow-hidden border-2 border-dashed cursor-pointer transition ${
+                    fotoSosmed.preview ? 'border-transparent' : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 bg-slate-50 dark:bg-slate-900/50'
+                  }`}
+                  onClick={() => !fotoSosmed.preview && sosmedInputRef.current?.click()}
+                >
+                  {fotoSosmed.preview ? (
+                    <>
+                      <img src={fotoSosmed.preview} alt="Foto Sosmed" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeFotoSosmed(); }}
+                        className="absolute top-2 right-2 w-7 h-7 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-black/80 transition"
+                        title="Hapus foto sosmed"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <div className="absolute bottom-2 left-2">
+                        <span className="text-xs bg-black/60 text-white px-2.5 py-1 rounded-full font-medium">1:1 Sosmed</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full gap-2 p-4 text-center">
+                      <ImagePlus className="w-10 h-10 text-slate-300" />
+                      <div>
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">Pilih Foto Sosmed</span>
+                        <span className="text-[11px] text-slate-400">Rasio 1:1 Persegi</span>
+                      </div>
+                    </div>
+                  )}
+                  <input
+                    ref={sosmedInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleSosmedFileSelect(file);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Isi Konten */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm space-y-3">

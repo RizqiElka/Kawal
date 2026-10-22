@@ -45,9 +45,9 @@ class KontenPolicy
             return true;
         }
 
-        // Kabid hanya bisa melihat konten bidangnya
-        if ($user->hasRole('kabid')) {
-            return $konten->bidang_id === $user->bidang_id;
+        // Kabid bisa melihat konten yang sedang di tahap persetujuan kabid
+        if ($user->hasRole('kabid') && $konten->status === 'diproses' && $konten->tahap_saat_ini === 'kabid') {
+            return true;
         }
 
         return false;
@@ -124,7 +124,7 @@ class KontenPolicy
         $currentStage = $konten->tahap_saat_ini;
 
         if ($currentStage === 'kabid') {
-            return $user->hasRole('kabid') && ($konten->bidang_id === $user->bidang_id);
+            return $user->hasRole('kabid');
         }
 
         if ($currentStage === 'editor') {

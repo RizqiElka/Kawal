@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Edit2,
@@ -6,7 +6,6 @@ import {
   Search,
   X,
   Save,
-  CheckCircle,
   RotateCcw,
   User as UserIcon,
   ChevronDown,
@@ -18,6 +17,7 @@ import {
   ArrowDown,
   ShieldCheck,
   Info,
+  RefreshCw,
 } from 'lucide-react';
 import apiClient from '../api/client';
 import type { User } from '../types';
@@ -105,6 +105,31 @@ const PenggunaPage: React.FC = () => {
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Gagal menghapus.'),
   });
+
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.post('/users/sync-sipeg');
+      return res.data;
+    },
+    onSuccess: (data: any) => {
+      toast.success(data?.message || 'Sinkronisasi data pegawai dari SIPEG berhasil!');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Gagal menyinkronkan data dengan SIPEG.');
+    },
+  });
+
+  // Otomatis tarik pembaruan data pegawai terbaru dari SIPEG secara hening saat halaman dibuka
+  useEffect(() => {
+    apiClient.post('/users/sync-sipeg')
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+      })
+      .catch(() => {
+        // Abaikan jika SIPEG sedang offline saat background sync
+      });
+  }, []);
 
   // Toggle pengurutan nama: Default -> Asc (A-Z) -> Desc (Z-A) -> Default
   const handleToggleSortName = () => {
@@ -199,15 +224,22 @@ const PenggunaPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Manajemen Pengguna & Role</h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-              <CheckCircle className="w-3 h-3" />
-              Auto-Sync SIPEG
-            </span>
           </div>
           <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
-            Data pegawai otomatis ditarik dari SIPEG Bapperida. Admin dapat mengatur role dan hak akses untuk alur persetujuan konten.
+            Data pegawai dapat disinkronkan langsung dari SIPEG Bapperida. Admin dapat mengatur role dan hak akses untuk alur persetujuan konten.
           </p>
         </div>
+
+        <button
+          type="button"
+          disabled={syncMutation.isPending}
+          onClick={() => syncMutation.mutate()}
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition disabled:opacity-50 shrink-0 self-start sm:self-auto cursor-pointer"
+          title="Tarik data pegawai terbaru dari SIPEG / BAPERAN"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+          {syncMutation.isPending ? 'Menyinkronkan...' : 'Sinkronkan Data SIPEG'}
+        </button>
       </div>
 
       {/* Filter & Search Bar (Filter Bidang Dihilangkan) */}

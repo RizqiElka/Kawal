@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   FileText,
@@ -21,10 +21,10 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useToast } from '../context/ToastContext';
 import apiClient from '../api/client';
 import type { Notifikasi } from '../types';
 import { NotificationModal } from './NotificationModal';
+import { LogoutModal } from './LogoutModal';
 
 interface NavItem {
   to: string;
@@ -45,21 +45,25 @@ const navItems: NavItem[] = [
   { to: '/pengaturan', icon: <Settings className="w-4.5 h-4.5" />, label: 'Pengaturan', permission: 'pengaturan.kelola' },
 ];
 
-const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { user, hasPermission, logout } = useAuth();
-  const toast = useToast();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    toast.info('Anda telah keluar dari sistem.');
-    navigate('/login');
-  };
+const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; onLogout: () => void }> = ({ isOpen, onClose, onLogout }) => {
+  const { user, hasPermission } = useAuth();
+  const location = useLocation();
 
   const visibleNavItems = navItems.filter((item) => {
     if (!item.permission) return true;
     return hasPermission(item.permission);
   });
+
+  const isItemActive = (to: string) => {
+    const currentPath = location.pathname.replace(/\/+$/, '') || '/';
+    if (to === '/konten/buat') {
+      return currentPath === '/konten/buat';
+    }
+    if (to === '/konten') {
+      return currentPath.startsWith('/konten') && currentPath !== '/konten/buat';
+    }
+    return currentPath === to || currentPath.startsWith(`${to}/`);
+  };
 
   return (
     <>
@@ -94,23 +98,24 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, o
 
         {/* Nav Items */}
         <nav className="flex-1 overflow-y-auto py-5 px-3.5 space-y-1">
-          {visibleNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-medium transition-all ${
+          {visibleNavItems.map((item) => {
+            const isActive = isItemActive(item.to);
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={onClose}
+                className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-sigap-700 text-white shadow-md shadow-sigap-900/50'
                     : 'text-sigap-300 hover:bg-sigap-800/60 hover:text-white'
-                }`
-              }
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
+                }`}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* User Profile */}
@@ -126,7 +131,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, o
               </div>
             </div>
             <button
-              onClick={handleLogout}
+              onClick={onLogout}
               title="Keluar"
               className="text-sigap-400 hover:text-rose-400 transition p-1"
             >
@@ -140,12 +145,10 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, o
 };
 
 // Topbar Component
-export const Topbar: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
-  const { user, logout } = useAuth();
+export const Topbar: React.FC<{ onMenuClick: () => void; onLogout: () => void }> = ({ onMenuClick, onLogout }) => {
+  const { user } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
-  const toast = useToast();
-  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
   const { data: notifications } = useQuery<Notifikasi[]>({
@@ -157,12 +160,6 @@ export const Topbar: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
   });
 
   const unreadCount = notifications?.filter((n) => !n.read_at).length || 0;
-
-  const handleLogout = async () => {
-    await logout();
-    toast.info('Anda telah keluar dari sistem.');
-    navigate('/login');
-  };
 
   return (
     <>
@@ -217,7 +214,10 @@ export const Topbar: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
           {showDropdown && (
             <div className="absolute right-0 top-12 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 w-48 z-50">
               <button
-                onClick={handleLogout}
+                onClick={() => {
+                  setShowDropdown(false);
+                  onLogout();
+                }}
                 className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-700 transition"
               >
                 <LogOut className="w-4 h-4" />
@@ -240,17 +240,30 @@ export const Topbar: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
 // AppLayout wrapping sidebar + topbar
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={() => setLogoutModalOpen(true)}
+      />
 
       <div className="flex-1 flex flex-col min-w-0 lg:ml-64 overflow-hidden bg-slate-50 dark:bg-slate-900 transition-colors">
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar
+          onMenuClick={() => setSidebarOpen(true)}
+          onLogout={() => setLogoutModalOpen(true)}
+        />
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           {children}
         </main>
       </div>
+
+      <LogoutModal
+        isOpen={logoutModalOpen}
+        onClose={() => setLogoutModalOpen(false)}
+      />
     </div>
   );
 };

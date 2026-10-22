@@ -6,6 +6,7 @@ export interface Bidang {
 
 export interface User {
   id: number;
+  sipeg_user_id?: number | null;
   pegawai_id: string;
   nip?: string;
   nama: string;
@@ -105,6 +106,7 @@ export interface Konten {
   isi: string;
   foto_sosmed_path?: string;
   foto_sosmed_url?: string;
+  video_url?: string;
   status: 'draft' | 'diproses' | 'revisi' | 'ditolak' | 'disetujui' | 'terbit';
   tahap_saat_ini?: string;
   revisi_ke: number;

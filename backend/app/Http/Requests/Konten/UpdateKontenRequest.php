@@ -27,11 +27,12 @@ class UpdateKontenRequest extends FormRequest
             'isi' => ['required', 'string'],
             'bidang_id' => ['nullable', 'integer', 'exists:bidang,id'],
             'foto' => ['nullable', 'array', 'min:1', 'max:3'],
-            'foto.*' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'foto.*' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:1024'],
             'captions' => ['nullable', 'array', 'max:3'],
             'captions.*' => ['nullable', 'string', 'max:255'],
-            'foto_sosmed' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'foto_sosmed' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:1024'],
             'hapus_foto_sosmed' => ['nullable', 'boolean'],
+            'video_url' => ['nullable', 'string', 'max:500'],
         ];
     }
 

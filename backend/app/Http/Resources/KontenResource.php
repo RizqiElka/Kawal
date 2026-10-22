@@ -53,6 +53,7 @@ class KontenResource extends JsonResource
             'foto_sosmed_url' => $this->foto_sosmed_path
                 ? (str_starts_with($this->foto_sosmed_path, 'http') ? $this->foto_sosmed_path : Storage::disk('public')->url($this->foto_sosmed_path))
                 : null,
+            'video_url' => $this->video_url,
             'foto' => $this->foto->map(function ($f) {
                 return [
                     'id' => $f->id,

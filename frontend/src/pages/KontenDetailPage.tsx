@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronLeft, CheckCircle2, RotateCcw, XCircle,
-  Globe, AlertCircle, ExternalLink, X
+  Globe, AlertCircle, ExternalLink, X, Video
 } from 'lucide-react';
 import apiClient from '../api/client';
 import type { Konten, AlurTahap } from '../types';
@@ -336,6 +336,40 @@ const KontenDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Tautan Video Konten jika tersedia */}
+      {konten.video_url && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center shrink-0">
+                <Video className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tautan Video Konten</h3>
+                <a
+                  href={konten.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-semibold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1.5 mt-0.5 break-all"
+                >
+                  <span>{konten.video_url}</span>
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                </a>
+              </div>
+            </div>
+            <a
+              href={konten.video_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition shrink-0"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Buka Video</span>
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Content Body */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">

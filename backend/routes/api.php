@@ -22,6 +22,9 @@ Route::get('/public/berita', [PublicPortalController::class, 'index']);
 Route::get('/public/berita/{slug}', [PublicPortalController::class, 'show']);
 Route::get('/mock/pegawai', [MockPegawaiController::class, 'index']);
 
+// Webhook Real-time dari BAPERAN/SIPEG (Tambah, Ubah, Hapus Pegawai)
+Route::post('/webhook/pegawai-sync', [\App\Http\Controllers\SsoController::class, 'handlePegawaiWebhook']);
+
 // Rute Terproteksi Sanctum
 Route::middleware('auth:sanctum')->group(function () {
     // Auth & Profil

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import apiClient from '../api/client';
 
@@ -19,7 +19,6 @@ import apiClient from '../api/client';
  */
 const SsoCallbackPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [status, setStatus] = useState<'loading' | 'error'>('loading');
@@ -57,6 +56,7 @@ const SsoCallbackPage: React.FC = () => {
 
         // Simpan data user
         localStorage.setItem('sigap_user', JSON.stringify(userData));
+        localStorage.setItem('kawal_login_source', 'sipeg');
         queryClient.clear();
 
         // Redirect ke dashboard

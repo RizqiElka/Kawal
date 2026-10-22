@@ -22,6 +22,7 @@ class Konten extends Model
         'slug',
         'isi',
         'foto_sosmed_path',
+        'video_url',
         'status',
         'tahap_saat_ini',
         'revisi_ke',

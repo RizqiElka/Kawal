@@ -19,24 +19,29 @@ class PublisherController extends Controller
      */
     public function kanals(): JsonResponse
     {
+        // Jalankan pengecekan publikasi terjadwal yang sudah jatuh tempo
+        \App\Services\Publishers\ScheduledPublicationProcessor::processDue();
+
         return response()->json([
             'data' => KanalPublikasi::orderBy('id')->get(),
         ]);
     }
 
     /**
-     * Memproses penerbitan konten ke kanal-kanal yang dipilih.
+     * Memproses penerbitan konten ke kanal-kanal yang dipilih (otomatis/terjadwal/manual).
      */
     public function publish(Request $request, Konten $konten): JsonResponse
     {
         Gate::authorize('publish', $konten);
 
-        // Dukung format pendataan (publications: [{kanal_id, url_post, published_at}])
-        // maupun format channels lama ({channels: [{kanal_id, jadwal_at}]})
+        // Dukung format publications baru
         if ($request->has('publications')) {
             $validated = $request->validate([
                 'publications' => ['required', 'array', 'min:1'],
                 'publications.*.kanal_id' => ['required', 'integer', 'exists:kanal_publikasi,id'],
+                'publications.*.mode' => ['nullable', 'string', 'in:otomatis,manual'],
+                'publications.*.is_scheduled' => ['nullable', 'boolean'],
+                'publications.*.jadwal_at' => ['nullable', 'date'],
                 'publications.*.url_post' => ['nullable', 'string', 'max:500'],
                 'publications.*.published_at' => ['nullable', 'date'],
                 'publications.*.status' => ['nullable', 'string', 'in:menunggu,terjadwal,berhasil,gagal'],
@@ -45,29 +50,88 @@ class PublisherController extends Controller
                 'publications.*.kanal_id.required' => 'Kanal publikasi wajib dipilih.',
             ]);
 
+            $scheduledCount = 0;
+            $publishedCount = 0;
+
             foreach ($validated['publications'] as $item) {
-                Publikasi::updateOrCreate(
-                    [
-                        'konten_id' => $konten->id,
-                        'kanal_id' => $item['kanal_id'],
-                    ],
-                    [
-                        'url_post' => $item['url_post'] ?? null,
-                        'published_at' => ! empty($item['published_at']) ? Carbon::parse($item['published_at']) : Carbon::now(),
-                        'status' => $item['status'] ?? 'berhasil',
-                        'pesan_error' => null,
-                    ]
-                );
+                $mode = $item['mode'] ?? 'otomatis';
+                $isScheduled = !empty($item['is_scheduled']) && !empty($item['jadwal_at']) && Carbon::parse($item['jadwal_at'])->isFuture();
+
+                if ($mode === 'manual') {
+                    // Mode manual: Catat URL link yang sudah diunggah oleh publisher
+                    Publikasi::updateOrCreate(
+                        [
+                            'konten_id' => $konten->id,
+                            'kanal_id' => $item['kanal_id'],
+                        ],
+                        [
+                            'url_post' => $item['url_post'] ?? null,
+                            'published_at' => !empty($item['published_at']) ? Carbon::parse($item['published_at']) : Carbon::now(),
+                            'status' => 'berhasil',
+                            'jadwal_at' => null,
+                            'pesan_error' => null,
+                        ]
+                    );
+                    $publishedCount++;
+                } elseif ($isScheduled) {
+                    // Mode otomatis: Terjadwal di waktu mendatang
+                    $jadwalAt = Carbon::parse($item['jadwal_at']);
+                    $publikasi = Publikasi::updateOrCreate(
+                        [
+                            'konten_id' => $konten->id,
+                            'kanal_id' => $item['kanal_id'],
+                        ],
+                        [
+                            'status' => 'terjadwal',
+                            'jadwal_at' => $jadwalAt,
+                            'url_post' => null,
+                            'pesan_error' => null,
+                        ]
+                    );
+
+                    // Kirim ke antrean background dengan delay
+                    PublishContentToChannelJob::dispatch($publikasi)->delay($jadwalAt);
+                    $scheduledCount++;
+                } else {
+                    // Mode otomatis: Terbitkan SEKARANG juga secara otomatis
+                    $publikasi = Publikasi::updateOrCreate(
+                        [
+                            'konten_id' => $konten->id,
+                            'kanal_id' => $item['kanal_id'],
+                        ],
+                        [
+                            'status' => 'menunggu',
+                            'jadwal_at' => null,
+                            'pesan_error' => null,
+                        ]
+                    );
+
+                    // Langsung eksekusi adapter kanal
+                    PublishContentToChannelJob::dispatchSync($publikasi);
+                    $publishedCount++;
+                }
             }
 
             // Jika ada minimal 1 kanal yang berhasil dipublikasi, ubah status konten jadi 'terbit'
-            $konten->update([
-                'status' => 'terbit',
-                'published_at' => $konten->published_at ?? Carbon::now(),
-            ]);
+            $hasSuccess = $konten->publikasi()->where('status', 'berhasil')->exists();
+            if ($hasSuccess) {
+                $konten->update([
+                    'status' => 'terbit',
+                    'published_at' => $konten->published_at ?? Carbon::now(),
+                ]);
+            }
+
+            $message = 'Data publikasi berhasil diproses.';
+            if ($scheduledCount > 0 && $publishedCount === 0) {
+                $message = "Publikasi otomatis untuk {$scheduledCount} kanal berhasil dijadwalkan!";
+            } elseif ($publishedCount > 0 && $scheduledCount === 0) {
+                $message = "Konten berhasil dipublikasikan ke {$publishedCount} kanal secara otomatis!";
+            } elseif ($scheduledCount > 0 && $publishedCount > 0) {
+                $message = "Publikasi diproses: {$publishedCount} terbit sekarang, {$scheduledCount} dijadwalkan.";
+            }
 
             return response()->json([
-                'message' => 'Data tautan dan waktu publikasi konten berhasil disimpan.',
+                'message' => $message,
                 'data' => new KontenResource($konten->fresh(['user', 'bidang', 'jenisKonten', 'foto', 'persetujuan.reviewer', 'publikasi.kanal'])),
             ]);
         }

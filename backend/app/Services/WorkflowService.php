@@ -277,11 +277,6 @@ class WorkflowService
 
         $query = User::role($tahap->role_penyetuju)->where('is_active', true);
 
-        // Khusus Kabid: dibatasi sesuai bidang yang bersangkutan
-        if ($kodeTahap === 'kabid' && $bidangId) {
-            $query->where('bidang_id', $bidangId);
-        }
-
         return $query->get();
     }
 }

@@ -28,10 +28,11 @@ class StoreKontenRequest extends FormRequest
             'bidang_id' => ['nullable', 'integer', 'exists:bidang,id'],
             'submit_now' => ['nullable', 'boolean'],
             'foto' => ['required', 'array', 'min:1', 'max:3'],
-            'foto.*' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'], // maks 5MB
+            'foto.*' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:1024'], // maks 1MB
             'captions' => ['nullable', 'array', 'max:3'],
             'captions.*' => ['nullable', 'string', 'max:255'],
-            'foto_sosmed' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'foto_sosmed' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:1024'],
+            'video_url' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -88,7 +89,7 @@ class StoreKontenRequest extends FormRequest
             'foto.*.required' => 'File foto wajib diunggah.',
             'foto.*.image' => 'File harus berupa gambar yang valid.',
             'foto.*.mimes' => 'Format foto harus berupa JPG, PNG, atau WEBP.',
-            'foto.*.max' => 'Ukuran setiap foto maksimal 5 MB.',
+            'foto.*.max' => 'Ukuran setiap foto maksimal 1 MB.',
         ];
     }
 }

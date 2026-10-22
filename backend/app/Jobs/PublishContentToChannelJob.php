@@ -54,21 +54,23 @@ class PublishContentToChannelJob implements ShouldQueue
                     'pesan_error' => null,
                 ]);
 
-                // Jika kanal web berhasil diterbitkan, status konten resmi menjadi 'terbit'
-                if ($kanal->kode === 'web') {
+                // Jika ada kanal berhasil diterbitkan, ubah status konten resmi menjadi 'terbit'
+                if ($konten->status !== 'terbit') {
                     $konten->update([
                         'status' => 'terbit',
                         'published_at' => now(),
                     ]);
 
                     // Notifikasi ke pembuat konten
-                    $konten->user->notify(new WorkflowNotification(
-                        $konten,
-                        'terbit',
-                        "Konten Anda '{$konten->judul}' telah resmi diterbitkan ke portal web dan media publikasi.",
-                        null,
-                        $result['url_post']
-                    ));
+                    if ($konten->user) {
+                        $konten->user->notify(new WorkflowNotification(
+                            $konten,
+                            'terbit',
+                            "Konten Anda '{$konten->judul}' telah resmi diterbitkan ke {$kanal->nama}.",
+                            null,
+                            $result['url_post']
+                        ));
+                    }
                 }
             } else {
                 $this->publikasi->update([

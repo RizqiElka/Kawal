@@ -232,6 +232,49 @@ class SsoController extends Controller
     }
 
     /**
+     * Webhook penerima event pegawai dari BAPERAN/SIPEG (Tambah, Ubah, Hapus).
+     * Route: POST /api/webhook/pegawai-sync
+     */
+    public function handlePegawaiWebhook(Request $request)
+    {
+        $action    = $request->input('action', 'saved'); // 'saved', 'deleted'
+        $pegawaiId = $request->input('pegawai_id');
+        $nip       = $request->input('nip');
+
+        if ($action === 'deleted') {
+            // Jika dihapus di SIPEG, nonaktifkan akun di KAWAL
+            $user = User::query()
+                ->when($nip, fn($q) => $q->where('nip', $nip)->orWhere('pegawai_id', $nip))
+                ->when($pegawaiId, fn($q) => $q->orWhere('sipeg_user_id', $pegawaiId))
+                ->first();
+
+            if ($user) {
+                $user->update(['is_active' => false]);
+                Log::info("Webhook BAPERAN: Akun {$user->nama} ({$user->email}) dinonaktifkan karena dihapus di BAPERAN.");
+                return response()->json([
+                    'status'  => 'success',
+                    'action'  => 'deactivated',
+                    'message' => "User {$user->nama} berhasil dinonaktifkan.",
+                ]);
+            }
+
+            return response()->json([
+                'status'  => 'ignored',
+                'message' => 'User tidak ditemukan di KAWAL.',
+            ]);
+        }
+
+        // Jika tambah atau ubah ('saved', 'created', 'updated'), jalankan sinkronisasi
+        $syncedCount = $this->syncFromSipegInternal();
+
+        return response()->json([
+            'status'  => 'success',
+            'action'  => 'synced',
+            'message' => "Data pegawai berhasil disinkronkan otomatis ({$syncedCount} total).",
+        ]);
+    }
+
+    /**
      * Logout dari SIGAP & invalidate token.
      * Route: POST /sso/logout
      */
@@ -245,9 +288,9 @@ class SsoController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        $frontendUrl = config('sso.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
+        $sipegUrl = rtrim(config('sso.sipeg_url', env('SIPEG_URL', 'http://localhost:8000')), '/');
 
-        return redirect()->away($frontendUrl . '/login');
+        return redirect()->away($sipegUrl . '/sso/logout');
     }
 
     /**

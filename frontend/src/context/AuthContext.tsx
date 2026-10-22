@@ -7,8 +7,9 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  isSsoUser: boolean;
   login: (login: string, password: string) => Promise<User>;
-  logout: () => Promise<void>;
+  logout: (mode?: 'sipeg_dashboard' | 'sipeg_logout' | 'local') => Promise<void>;
   hasRole: (role: string) => boolean;
   hasPermission: (permission: string) => boolean;
   refreshUser: () => Promise<void>;
@@ -58,13 +59,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { user: userData, token: tokenData } = response.data.data;
     localStorage.setItem('sigap_token', tokenData);
     localStorage.setItem('sigap_user', JSON.stringify(userData));
+    localStorage.setItem('kawal_login_source', 'local');
     queryClient.clear();
     setToken(tokenData);
     setUser(userData);
     return userData;
   };
 
-  const logout = async () => {
+  const isSsoUser = Boolean(
+    user?.sipeg_user_id ||
+    localStorage.getItem('kawal_login_source') === 'sipeg'
+  );
+
+  const logout = async (mode?: 'sipeg_dashboard' | 'sipeg_logout' | 'local') => {
+    const sipegUrl = import.meta.env.VITE_SIPEG_URL || 'http://localhost:8000';
+    const isSso = Boolean(
+      user?.sipeg_user_id ||
+      localStorage.getItem('kawal_login_source') === 'sipeg'
+    );
+
     try {
       await apiClient.post('/auth/logout');
     } catch {
@@ -72,9 +85,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       localStorage.removeItem('sigap_token');
       localStorage.removeItem('sigap_user');
+      localStorage.removeItem('kawal_login_source');
       queryClient.clear();
       setUser(null);
       setToken(null);
+
+      if (isSso || mode === 'sipeg_logout') {
+        window.location.href = `${sipegUrl}/sso/logout`;
+      } else {
+        window.location.href = '/login';
+      }
     }
   };
 
@@ -94,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         token,
         isLoading,
+        isSsoUser,
         login,
         logout,
         hasRole,

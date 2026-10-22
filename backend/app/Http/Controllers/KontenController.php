@@ -26,6 +26,8 @@ class KontenController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        \App\Services\Publishers\ScheduledPublicationProcessor::processDue();
+
         $user = $request->user();
         $query = Konten::with(['user', 'bidang', 'jenisKonten', 'foto'])->latest();
 
@@ -43,13 +45,10 @@ class KontenController extends Controller
 
         if (! $canSeeAll) {
             if ($user->hasRole('kabid')) {
-                // Kabid: HANYA menampilkan konten yang sedang menunggu persetujuan Kabid di bidangnya
+                // Kabid: HANYA menampilkan konten yang sedang menunggu persetujuan Kabid
                 $query->where(function ($q) use ($user) {
-                    $q->where(function ($sub) use ($user) {
+                    $q->where(function ($sub) {
                         $sub->where('status', 'diproses')->where('tahap_saat_ini', 'kabid');
-                        if ($user->bidang_id) {
-                            $sub->where('bidang_id', $user->bidang_id);
-                        }
                     })->orWhere('user_id', $user->id);
                 });
             } elseif ($user->hasRole('editor')) {
@@ -154,12 +153,13 @@ class KontenController extends Controller
                 'judul' => $request->judul,
                 'slug' => $slug,
                 'isi' => $request->isi,
+                'video_url' => $request->input('video_url'),
                 'status' => 'draft',
                 'revisi_ke' => 0,
             ]);
 
-            // Simpan foto sosmed jika diunggah
-            if ($request->hasFile('foto_sosmed')) {
+            // Simpan foto sosmed HANYA jika pengguna memiliki role editor atau admin
+            if ($request->hasFile('foto_sosmed') && ($user->hasRole('editor') || $user->hasRole('admin'))) {
                 $sosmedPath = $request->file('foto_sosmed')->store('konten_foto_sosmed', 'public');
                 $konten->update(['foto_sosmed_path' => $sosmedPath]);
             }
@@ -227,21 +227,25 @@ class KontenController extends Controller
                 'judul' => $request->judul,
                 'slug' => Str::slug($request->judul) . '-' . $konten->id,
                 'isi' => $request->isi,
+                'video_url' => $request->input('video_url', $konten->video_url),
                 'jenis_konten_id' => $request->jenis_konten_id,
                 'bidang_id' => $request->input('bidang_id', $konten->bidang_id),
             ];
 
-            // Kelola foto sosmed jika ada upload baru atau penghapusan
-            if ($request->hasFile('foto_sosmed')) {
-                if ($konten->foto_sosmed_path) {
-                    Storage::disk('public')->delete($konten->foto_sosmed_path);
+            // Kelola foto sosmed HANYA jika pengguna memiliki role editor atau admin
+            $user = $request->user();
+            if ($user->hasRole('editor') || $user->hasRole('admin')) {
+                if ($request->hasFile('foto_sosmed')) {
+                    if ($konten->foto_sosmed_path) {
+                        Storage::disk('public')->delete($konten->foto_sosmed_path);
+                    }
+                    $updateData['foto_sosmed_path'] = $request->file('foto_sosmed')->store('konten_foto_sosmed', 'public');
+                } elseif ($request->boolean('hapus_foto_sosmed')) {
+                    if ($konten->foto_sosmed_path) {
+                        Storage::disk('public')->delete($konten->foto_sosmed_path);
+                    }
+                    $updateData['foto_sosmed_path'] = null;
                 }
-                $updateData['foto_sosmed_path'] = $request->file('foto_sosmed')->store('konten_foto_sosmed', 'public');
-            } elseif ($request->boolean('hapus_foto_sosmed')) {
-                if ($konten->foto_sosmed_path) {
-                    Storage::disk('public')->delete($konten->foto_sosmed_path);
-                }
-                $updateData['foto_sosmed_path'] = null;
             }
 
             $konten->update($updateData);

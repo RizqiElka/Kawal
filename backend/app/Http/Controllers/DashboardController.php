@@ -22,11 +22,8 @@ class DashboardController extends Controller
             if (! $canSeeAll) {
                 if ($user->hasRole('kabid')) {
                     $query->where(function ($q) use ($user) {
-                        $q->where(function ($sub) use ($user) {
+                        $q->where(function ($sub) {
                             $sub->where('status', 'diproses')->where('tahap_saat_ini', 'kabid');
-                            if ($user->bidang_id) {
-                                $sub->where('bidang_id', $user->bidang_id);
-                            }
                         })->orWhere('user_id', $user->id);
                     });
                 } elseif ($user->hasRole('editor')) {
@@ -56,7 +53,13 @@ class DashboardController extends Controller
         // Dihitung berdasarkan lingkup yang bisa diakses user (atau seluruhnya jika admin/kepala/sekretaris)
         $totalKontenQuery = Konten::where('status', '!=', 'draft');
         if (! $canSeeAll) {
-            if ($user->hasRole('kabid') || $user->hasRole('user')) {
+            if ($user->hasRole('kabid')) {
+                $totalKontenQuery->where(function ($q) use ($user) {
+                    $q->where(function ($sub) {
+                        $sub->where('status', 'diproses')->where('tahap_saat_ini', 'kabid');
+                    })->orWhere('user_id', $user->id);
+                });
+            } elseif ($user->hasRole('user')) {
                 if ($user->bidang_id) {
                     $totalKontenQuery->where('bidang_id', $user->bidang_id);
                 } else {
@@ -83,9 +86,6 @@ class DashboardController extends Controller
         if (! $canSeeAll) {
             if ($user->hasRole('kabid')) {
                 $menungguPersetujuanQuery->where('tahap_saat_ini', 'kabid');
-                if ($user->bidang_id) {
-                    $menungguPersetujuanQuery->where('bidang_id', $user->bidang_id);
-                }
             } elseif ($user->hasRole('editor')) {
                 $menungguPersetujuanQuery->where('tahap_saat_ini', 'editor');
             } elseif ($user->hasRole('publisher')) {
