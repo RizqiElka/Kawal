@@ -2,11 +2,8 @@
   "name": "kawal-monorepo",
   "private": true,
   "scripts": {
-    "dev": "npm --prefix frontend run dev",
-    "backend": "php backend/artisan serve",
-    "build": "npm --prefix frontend run build"
-  },
-  "dependencies": {
-    "axios": "^1.20.0"
+    "dev": "npm --prefix backend run dev",
+    "backend": "php backend/artisan serve --port=8001",
+    "build": "npm --prefix backend run build"
   }
 }
