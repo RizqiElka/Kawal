@@ -6,7 +6,6 @@ import {
   PlusCircle,
   Users,
   ShieldCheck,
-  Settings,
   Bell,
   ChevronDown,
   LogOut,
@@ -42,7 +41,6 @@ const navItems: NavItem[] = [
   { to: '/pengguna', icon: <Users className="w-4.5 h-4.5" />, label: 'Pengguna', permission: 'pengguna.kelola' },
   { to: '/roles', icon: <ShieldAlert className="w-4.5 h-4.5" />, label: 'Role & Hak Akses', permission: 'role.kelola' },
   { to: '/jenis-konten', icon: <Tags className="w-4.5 h-4.5" />, label: 'Jenis Konten', permission: 'pengaturan.kelola' },
-  { to: '/pengaturan', icon: <Settings className="w-4.5 h-4.5" />, label: 'Pengaturan', permission: 'pengaturan.kelola' },
 ];
 
 const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; onLogout: () => void }> = ({ isOpen, onClose, onLogout }) => {

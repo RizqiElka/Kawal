@@ -7,7 +7,6 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/Layout';
 import { ThemeProvider } from './context/ThemeContext';
 
-const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const JenisKontenPage = React.lazy(() => import('./pages/JenisKontenPage'));
 const SsoCallbackPage = React.lazy(() => import('./pages/SsoCallbackPage'));
 
@@ -160,16 +159,7 @@ const App: React.FC = () => {
                   }
                 />
 
-                <Route
-                  path="/pengaturan"
-                  element={
-                    <ProtectedRoute permission="pengaturan.kelola">
-                      <AppLayout>
-                        <SettingsPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  }
-                />
+
 
                 <Route
                   path="/jenis-konten"
