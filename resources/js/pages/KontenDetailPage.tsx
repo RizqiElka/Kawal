@@ -12,7 +12,7 @@ import { Stepper } from '../components/Stepper';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
 
 const ActionModal: React.FC<{
   isOpen: boolean;

@@ -14,7 +14,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import type { JenisKonten, Konten } from '../types';
 
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
 
 const MAX_TITLE = 100;
 
