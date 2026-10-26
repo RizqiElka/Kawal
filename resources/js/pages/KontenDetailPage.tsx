@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronLeft, CheckCircle2, RotateCcw, XCircle,
+  ChevronLeft, ChevronDown, CheckCircle2, RotateCcw, XCircle,
   Globe, AlertCircle, ExternalLink, X, Video
 } from 'lucide-react';
 import apiClient from '../api/client';
@@ -147,6 +147,7 @@ const KontenDetailPage: React.FC = () => {
   const [modal, setModal] = useState<null | 'approve' | 'revisi' | 'tolak'>(null);
   const [activePhoto, setActivePhoto] = useState(0);
   const [selectedImageModal, setSelectedImageModal] = useState<{ url: string; caption?: string } | null>(null);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
 
   const { data: konten, isLoading, error } = useQuery<Konten>({
     queryKey: ['konten-detail', id],
@@ -373,11 +374,35 @@ const KontenDetailPage: React.FC = () => {
 
       {/* Content Body */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
-        <h2 className="font-bold text-slate-700 dark:text-slate-300 text-sm mb-4">Naskah Konten</h2>
-        <div
-          className="prose prose-slate prose-sm max-w-none dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: konten.isi }}
-        />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-slate-700 dark:text-slate-300 text-sm">Naskah Konten</h2>
+          <button
+            onClick={() => setIsContentExpanded(!isContentExpanded)}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-sigap-600 dark:text-sigap-400 hover:text-sigap-700 dark:hover:text-sigap-300 transition"
+          >
+            <span>{isContentExpanded ? 'Sembunyikan' : 'Tampilkan Semua'}</span>
+            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isContentExpanded ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+        <div className="relative">
+          <div
+            className="prose prose-slate prose-sm max-w-none dark:prose-invert overflow-hidden transition-all duration-500 ease-in-out"
+            style={{ maxHeight: isContentExpanded ? '100000px' : '200px' }}
+            dangerouslySetInnerHTML={{ __html: konten.isi }}
+          />
+          {!isContentExpanded && (
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none" />
+          )}
+        </div>
+        {!isContentExpanded && (
+          <button
+            onClick={() => setIsContentExpanded(true)}
+            className="mt-3 w-full py-2.5 text-sm font-semibold text-sigap-600 dark:text-sigap-400 bg-sigap-50 dark:bg-sigap-950/30 hover:bg-sigap-100 dark:hover:bg-sigap-950/50 rounded-xl transition flex items-center justify-center gap-1.5"
+          >
+            <ChevronDown className="w-4 h-4" />
+            <span>Tampilkan Selengkapnya</span>
+          </button>
+        )}
       </div>
 
       {/* Informasi Publikasi & Link Tayang */}

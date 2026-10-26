@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import apiClient from '../api/client';
+import { PageLoader } from '../components/PageLoader';
 
 /**
  * Halaman SSO Callback — /sso/callback
@@ -109,21 +110,7 @@ const SsoCallbackPage: React.FC = () => {
   }
 
   // Loading state
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-      <div className="text-center">
-        {/* Spinner */}
-        <div className="w-14 h-14 border-4 border-sigap-200 border-t-sigap-600 rounded-full animate-spin mx-auto mb-4" />
-
-        <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-1">
-          Memproses Login SSO...
-        </h2>
-        <p className="text-slate-400 dark:text-slate-500 text-sm">
-          Mengambil data dari SIPEG, harap tunggu sebentar.
-        </p>
-      </div>
-    </div>
-  );
+  return <PageLoader />;
 };
 
 export default SsoCallbackPage;

@@ -294,6 +294,23 @@ class SsoController extends Controller
     }
 
     /**
+     * Logout via GET — dipanggil dari SPA tanpa perlu CSRF token.
+     * Menghapus token KAWAL lalu redirect ke BAPERAN logout.
+     * Route: GET /sso/baperan-logout
+     */
+    public function baperanLogout(Request $request)
+    {
+        // Hapus semua token Sanctum milik user (jika masih terautentikasi via header)
+        if ($user = $request->user()) {
+            $user->tokens()->where('name', 'sso-login')->delete();
+        }
+
+        $sipegUrl = rtrim(config('sso.sipeg_url', env('SIPEG_URL', 'http://localhost:8000')), '/');
+
+        return redirect()->away($sipegUrl . '/sso/logout');
+    }
+
+    /**
      * Helper: redirect ke halaman login frontend dengan pesan error.
      */
     private function redirectWithError(string $message)

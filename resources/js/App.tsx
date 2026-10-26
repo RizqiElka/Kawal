@@ -1,4 +1,5 @@
 import React, { Suspense } from 'react';
+import { PageLoader } from './components/PageLoader';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
@@ -34,14 +35,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const PageLoader: React.FC = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900/50">
-    <div className="flex flex-col items-center gap-3">
-      <div className="w-10 h-10 border-4 border-sigap-200 border-t-sigap-600 rounded-full animate-spin" />
-      <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">Memuat halaman...</span>
-    </div>
-  </div>
-);
+// Removed local PageLoader – using shared component
 
 const App: React.FC = () => {
   return (

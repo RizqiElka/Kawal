@@ -70,32 +70,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user?.sipeg_user_id ||
     localStorage.getItem('kawal_login_source') === 'sipeg'
   );
-
   const logout = async (mode?: 'sipeg_dashboard' | 'sipeg_logout' | 'local') => {
     const sipegUrl = import.meta.env.VITE_SIPEG_URL || 'http://localhost:8000';
     const isSso = Boolean(
       user?.sipeg_user_id ||
-      localStorage.getItem('kawal_login_source') === 'sipeg'
+      localStorage.getItem('kawal_login_source') === 'sipeg' ||
+      mode === 'sipeg_logout'
     );
 
+    // Tandai proses logout agar interceptor 401 tidak ikut redirect
+    (window as any).__sigap_logging_out = true;
+
+    // Bersihkan storage KAWAL (localStorage saja, belum setState)
+    localStorage.removeItem('sigap_token');
+    localStorage.removeItem('sigap_user');
+    localStorage.removeItem('kawal_login_source');
+
+    if (isSso) {
+      // Langsung redirect — jangan setState dulu agar ProtectedRoute
+      // tidak sempat render <Navigate to="/login">
+      window.location.replace('/sso/baperan-logout');
+      return;
+    }
+
+    // User lokal: logout API lalu redirect — juga tanpa setState dulu
     try {
       await apiClient.post('/auth/logout');
     } catch {
-      // Abaikan jika token sudah kedaluwarsa
-    } finally {
-      localStorage.removeItem('sigap_token');
-      localStorage.removeItem('sigap_user');
-      localStorage.removeItem('kawal_login_source');
-      queryClient.clear();
-      setUser(null);
-      setToken(null);
-
-      if (isSso || mode === 'sipeg_logout') {
-        window.location.href = `${sipegUrl}/sso/logout`;
-      } else {
-        window.location.href = '/login';
-      }
+      // Abaikan
     }
+    window.location.replace(`${sipegUrl}/login`);
   };
 
   const hasRole = (role: string): boolean => {

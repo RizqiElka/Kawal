@@ -230,16 +230,7 @@ const PenggunaPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          disabled={syncMutation.isPending}
-          onClick={() => syncMutation.mutate()}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition disabled:opacity-50 shrink-0 self-start sm:self-auto cursor-pointer"
-          title="Tarik data pegawai terbaru dari SIPEG / BAPERAN"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
-          {syncMutation.isPending ? 'Menyinkronkan...' : 'Sinkronkan Data SIPEG'}
-        </button>
+
       </div>
 
       {/* Filter & Search Bar (Filter Bidang Dihilangkan) */}
