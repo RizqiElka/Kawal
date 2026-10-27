@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, X, Check, Tags } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Tags } from 'lucide-react';
 import apiClient from '../api/client';
 import { useToast } from '../context/ToastContext';
 
 interface JenisKonten {
   id: number;
   nama: string;
-  wajib_cek_5w1h: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -15,7 +14,7 @@ interface JenisKonten {
 const JenisKontenPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState<JenisKonten | null>(null);
-  const [formData, setFormData] = useState({ nama: '', wajib_cek_5w1h: true });
+  const [formData, setFormData] = useState({ nama: '' });
 
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -61,7 +60,7 @@ const JenisKontenPage: React.FC = () => {
   const openModal = (item?: JenisKonten) => {
     if (item) {
       setEditData(item);
-      setFormData({ nama: item.nama, wajib_cek_5w1h: item.wajib_cek_5w1h });
+      setFormData({ nama: item.nama });
     } else {
       setEditData(null);
       setFormData({ nama: '', wajib_cek_5w1h: true });
@@ -72,7 +71,7 @@ const JenisKontenPage: React.FC = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditData(null);
-    setFormData({ nama: '', wajib_cek_5w1h: true });
+    setFormData({ nama: '' });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -120,7 +119,6 @@ const JenisKontenPage: React.FC = () => {
             <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th className="px-6 py-4">Nama Jenis Konten</th>
-                <th className="px-6 py-4 text-center">Cek 5W1H</th>
                 <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
             </thead>
@@ -129,15 +127,6 @@ const JenisKontenPage: React.FC = () => {
                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
                   <td className="px-6 py-4 font-medium text-slate-800 dark:text-white">
                     {item.nama}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    {item.wajib_cek_5w1h ? (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-                        <Check className="w-4 h-4" />
-                      </span>
-                    ) : (
-                      <span className="text-slate-400">-</span>
-                    )}
                   </td>
                   <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                     <button
@@ -159,7 +148,7 @@ const JenisKontenPage: React.FC = () => {
               ))}
               {data?.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={2} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     Belum ada data jenis konten
                   </td>
                 </tr>
@@ -197,18 +186,7 @@ const JenisKontenPage: React.FC = () => {
                   autoFocus
                 />
               </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="wajib_cek_5w1h"
-                  checked={formData.wajib_cek_5w1h}
-                  onChange={(e) => setFormData({ ...formData, wajib_cek_5w1h: e.target.checked })}
-                  className="w-4 h-4 text-sigap-600 rounded border-slate-300 focus:ring-sigap-500"
-                />
-                <label htmlFor="wajib_cek_5w1h" className="text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
-                  Wajib Cek Kelengkapan 5W1H (AI)
-                </label>
-              </div>
+
 
               <div className="pt-4 flex justify-end gap-3">
                 <button
