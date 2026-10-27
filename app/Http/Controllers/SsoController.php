@@ -76,6 +76,11 @@ class SsoController extends Controller
         $namaLengkap = $sipegPegawai['nama_lengkap'] ?? $sipegPegawai['nama'] ?? $sipegUser['username'];
         $nip = $sipegPegawai['nip'] ?? $sipegUser['username'] ?? ('PEG-' . $sipegUser['id']);
 
+        // Tentukan is_active: prioritaskan status_kerja pegawai jika ada, fallback ke is_active user SIPEG
+        $isActive = isset($sipegPegawai['status_kerja'])
+            ? ($sipegPegawai['status_kerja'] === 'Aktif')
+            : ($sipegUser['is_active'] ?? true);
+
         $user->fill([
             'sipeg_user_id'  => $sipegUser['id'],
             'pegawai_id'     => $nip,
@@ -83,7 +88,7 @@ class SsoController extends Controller
             'email'          => $sipegUser['email'],
             'nip'            => $sipegPegawai['nip'] ?? null,
             'jabatan'        => $sipegPegawai['jabatan']['nama_jabatan'] ?? null,
-            'is_active'      => $sipegUser['is_active'] ?? true,
+            'is_active'      => $isActive,
             'last_synced_at' => now(),
         ]);
 
@@ -180,7 +185,10 @@ class SsoController extends Controller
                 'nama'           => $namaLengkap,
                 'nip'            => $p['nip'] ?? null,
                 'jabatan'        => $p['jabatan']['nama_jabatan'] ?? null,
-                'is_active'      => ($p['status_kerja'] ?? '') === 'Aktif' || ($p['user']['is_active'] ?? true),
+                // Prioritas: jika status_kerja ada, gunakan itu. Jika tidak ada, fallback ke is_active dari user SIPEG.
+                'is_active'      => isset($p['status_kerja'])
+                    ? ($p['status_kerja'] === 'Aktif')
+                    : ($p['user']['is_active'] ?? true),
                 'last_synced_at' => now(),
             ]);
 
@@ -243,10 +251,15 @@ class SsoController extends Controller
 
         if ($action === 'deleted') {
             // Jika dihapus di SIPEG, nonaktifkan akun di KAWAL
-            $user = User::query()
-                ->when($nip, fn($q) => $q->where('nip', $nip)->orWhere('pegawai_id', $nip))
-                ->when($pegawaiId, fn($q) => $q->orWhere('sipeg_user_id', $pegawaiId))
-                ->first();
+            // Gunakan orWhere dalam satu where() agar scope-nya benar
+            $user = User::where(function ($q) use ($nip, $pegawaiId) {
+                if ($nip) {
+                    $q->where('nip', $nip)->orWhere('pegawai_id', $nip);
+                }
+                if ($pegawaiId) {
+                    $q->orWhere('sipeg_user_id', $pegawaiId);
+                }
+            })->first();
 
             if ($user) {
                 $user->update(['is_active' => false]);
